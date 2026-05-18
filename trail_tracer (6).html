@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>북한산 Trail Tracer v3</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
+#map{width:100%;height:100vh}
+.panel{
+  position:absolute;top:0;left:0;z-index:999;
+  width:300px;background:rgba(255,255,255,0.97);
+  padding:12px;border-radius:0 0 12px 0;
+  box-shadow:2px 2px 16px rgba(0,0,0,0.2);
+}
+.title{font-size:15px;font-weight:800;margin-bottom:8px;color:#2d6a4f}
+.howto{background:#fffde7;border:1px solid #f9c74f;border-radius:8px;
+  padding:8px;font-size:11px;line-height:1.7;margin-bottom:8px;color:#555}
+.howto b{color:#e65100}
+.row{display:flex;gap:6px;margin-bottom:7px}
+.row input{flex:1;border:1.5px solid #ccc;border-radius:7px;padding:7px 8px;font-size:12px}
+.row button{border:none;border-radius:7px;padding:7px 12px;
+  font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+select{width:100%;border:1.5px solid #ccc;border-radius:7px;
+  padding:7px 8px;font-size:12px;margin-bottom:7px;background:#fff}
+.info{display:flex;justify-content:space-between;
+  background:#f0fff4;padding:7px 10px;border-radius:7px;
+  margin-bottom:7px;font-size:12px;border:1px solid #b7e4c7}
+.info span{color:#1b7e3e;font-weight:700}
+.btns{display:flex;gap:5px;margin-bottom:7px}
+.btns button{flex:1;border:none;border-radius:7px;
+  padding:8px 4px;font-weight:700;font-size:11px;cursor:pointer}
+textarea{width:100%;height:90px;resize:none;border-radius:7px;
+  border:1px solid #ccc;padding:7px;font-size:11px;
+  font-family:monospace;background:#f9f9f9;margin-bottom:6px}
+.tip{font-size:10px;color:#888;line-height:1.6}
+.tip b{color:#2d6a4f}
+#warn{display:none;position:fixed;top:10px;left:50%;
+  transform:translateX(-50%);color:#fff;padding:8px 18px;
+  border-radius:20px;font-size:13px;font-weight:700;
+  z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,.3);white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="warn"></div>
+<div class="panel">
+  <div class="title">🏔 북한산 Trail Tracer v3</div>
+
+  <div class="howto">
+    <b>📋 사용법</b><br>
+    1. 앱키 입력 → 지도 로드<br>
+    2. 코스 선택<br>
+    3. 위성+지형도 위 등산로를 클릭클릭!<br>
+    4. Export → 복사 → 클로드에게!
+  </div>
+
+  <div class="row">
+    <input type="text" id="appkey" placeholder="카카오 JavaScript 앱키"/>
+    <button onclick="loadMap()" style="background:#2d6a4f;color:#fff">지도 로드</button>
+  </div>
+
+  <select id="courseSelect" onchange="onCourseChange()">
+    <option value="0">0. 대남문코스 (북한산성탐방지원센터)</option>
+    <option value="1">1. 사패산코스 (송추분소)</option>
+    <option value="2">2. 오봉코스 (송추분소)</option>
+    <option value="3">3. 우이암코스 (도봉탐방지원센터)</option>
+    <option value="4">4. 망월사·포대·회룡 (원도봉탐방지원센터)</option>
+    <option value="5">5. 신선대코스 (도봉탐방지원센터)</option>
+    <option value="6">6. 보국문코스 (정릉탐방지원센터)</option>
+    <option value="7">7. 대동문코스 (백련공원지킴터)</option>
+    <option value="8">8. 소귀천코스 (소귀천공원지킴터)</option>
+    <option value="9">9. 북한산성코스 (북한산성탐방지원센터)</option>
+    <option value="10">10. 백운대코스 (백운대탐방지원센터)</option>
+    <option value="11">11. 사모바위코스 (구기탐방지원센터)</option>
+    <option value="12">12. 비봉코스 (비봉탐방지원센터)</option>
+  </select>
+
+  <div class="info">
+    <div>포인트: <span id="ptCount">0</span>개</div>
+    <div>거리: <span id="distKm">0.00</span> km</div>
+  </div>
+
+  <div class="btns">
+    <button onclick="undo()" style="background:#e0e0e0;color:#333">↩ Undo</button>
+    <button onclick="clearAll()" style="background:#ff4d4d;color:#fff">🗑 Clear</button>
+    <button onclick="doExport()" style="background:#2f96ec;color:#fff">📤 Export</button>
+    <button onclick="doCopy()" style="background:#00A86B;color:#fff">✅ 복사!</button>
+  </div>
+
+  <textarea id="output" placeholder="Export 후 JSON이 여기 표시됩니다. 복사해서 클로드에게 붙여넣으세요!"></textarea>
+
+  <div class="tip">
+    • 지도 클릭 → 포인트 추가<br>
+    • 마커 드래그 → 위치 수정<br>
+    • <b>Undo</b>: 마지막 포인트 삭제<br>
+    • 코스별 자동저장
+  </div>
+</div>
+<div id="map"></div>
+
+<script>
+var CENTERS={
+  0:[37.6415,126.9712], 1:[37.7230,127.0150], 2:[37.7160,127.0000],
+  3:[37.6900,127.0200], 4:[37.7040,127.0350], 5:[37.6920,127.0170],
+  6:[37.6250,126.9990], 7:[37.6580,127.0120], 8:[37.6560,127.0110],
+  9:[37.6480,126.9600], 10:[37.6575,127.0058], 11:[37.6270,126.9680],
+  12:[37.6400,126.9660]
+};
+
+var map=null, poly=null, path=[], markers=[], imgS=null, imgE=null;
+
+function warn(msg,ms,bg){
+  var el=document.getElementById('warn');
+  el.textContent=msg; el.style.background=bg||'#2d6a4f';
+  el.style.display='block';
+  clearTimeout(warn._t);
+  warn._t=setTimeout(function(){el.style.display='none';},ms||2000);
+}
+
+function loadMap(){
+  var key=document.getElementById('appkey').value.trim();
+  if(!key){alert('앱키를 입력하세요!');return;}
+  localStorage.setItem('tt_key',key);
+  var old=document.getElementById('_sdk'); if(old)old.remove();
+  var s=document.createElement('script');
+  s.id='_sdk';
+  s.src='//dapi.kakao.com/v2/maps/sdk.js?appkey='+key+'&autoload=false';
+  s.onload=function(){kakao.maps.load(initMap);};
+  s.onerror=function(){alert('앱키 오류 또는 도메인 미등록');};
+  document.head.appendChild(s);
+}
+
+function initMap(){
+  var id=parseInt(document.getElementById('courseSelect').value);
+  var c=CENTERS[id]||[37.648,126.96];
+  map=new kakao.maps.Map(document.getElementById('map'),{
+    center:new kakao.maps.LatLng(c[0],c[1]), level:4
+  });
+
+  // 위성+지형도
+  map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
+  map.addOverlayMapTypeId(kakao.maps.MapTypeId.TERRAIN);
+
+  poly=new kakao.maps.Polyline({
+    strokeWeight:5, strokeColor:'#00C853',
+    strokeOpacity:0.95, strokeStyle:'solid'
+  });
+  poly.setMap(map);
+
+  imgS=new kakao.maps.MarkerImage(
+    'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/red_b.png',
+    new kakao.maps.Size(36,32));
+  imgE=new kakao.maps.MarkerImage(
+    'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/blue_b.png',
+    new kakao.maps.Size(36,32));
+
+  kakao.maps.event.addListener(map,'click',function(e){
+    var ll=e.latLng;
+    var lat=parseFloat(ll.getLat().toFixed(6));
+    var lng=parseFloat(ll.getLng().toFixed(6));
+    if(path.length>0){
+      var last=new kakao.maps.LatLng(path[path.length-1][0],path[path.length-1][1]);
+      var d=getDist(last,ll);
+      if(d>150) warn('⚠️ '+Math.round(d)+'m 간격',2000,'#e65100');
+      if(markers.length>0) markers[markers.length-1].setImage(null);
+    }
+    path.push([lat,lng]);
+    redraw();
+    markers.push(mkMarker(ll,path.length-1));
+    updateUI(); save();
+  });
+
+  loadSaved(id);
+  warn('✅ 지도 로드 완료! 등산로를 클릭하세요',2500);
+}
+
+function mkMarker(ll,idx){
+  var m=new kakao.maps.Marker({
+    position:ll, draggable:true,
+    image:idx===0?imgS:imgE
+  });
+  m.setMap(map);
+  kakao.maps.event.addListener(m,'drag',function(){
+    var p=m.getPosition();
+    path[idx]=[parseFloat(p.getLat().toFixed(6)),parseFloat(p.getLng().toFixed(6))];
+    redraw(); updateUI();
+  });
+  kakao.maps.event.addListener(m,'dragend',function(){save();});
+  return m;
+}
+
+function redraw(){
+  if(!poly)return;
+  poly.setPath(path.map(function(p){return new kakao.maps.LatLng(p[0],p[1]);}));
+}
+function clearMarkers(){markers.forEach(function(m){m.setMap(null);});markers=[];}
+function getDist(a,b){return new kakao.maps.Polyline({path:[a,b]}).getLength();}
+
+function updateUI(){
+  document.getElementById('ptCount').textContent=path.length;
+  document.getElementById('distKm').textContent=poly?(poly.getLength()/1000).toFixed(2):'0.00';
+}
+
+function save(){
+  var id=document.getElementById('courseSelect').value;
+  localStorage.setItem('tt_path_'+id,JSON.stringify(path));
+}
+
+function loadSaved(id){
+  clearMarkers(); path=[];
+  var sv=localStorage.getItem('tt_path_'+id);
+  if(!sv){updateUI();return;}
+  try{
+    path=JSON.parse(sv);
+    path.forEach(function(p,i){
+      var m=mkMarker(new kakao.maps.LatLng(p[0],p[1]),i);
+      if(i!==0&&i!==path.length-1) m.setImage(null);
+      markers.push(m);
+    });
+    redraw();
+    if(path.length>0&&map) map.setCenter(new kakao.maps.LatLng(path[0][0],path[0][1]));
+  }catch(e){}
+  updateUI();
+}
+
+function undo(){
+  if(!path.length)return;
+  path.pop();
+  var m=markers.pop(); if(m)m.setMap(null);
+  if(markers.length>0) markers[markers.length-1].setImage(imgE);
+  redraw(); updateUI(); save();
+}
+
+function clearAll(){
+  if(!confirm('모든 포인트를 삭제할까요?'))return;
+  path=[]; if(poly)poly.setPath([]); clearMarkers();
+  var id=document.getElementById('courseSelect').value;
+  localStorage.removeItem('tt_path_'+id);
+  document.getElementById('output').value='';
+  updateUI();
+}
+
+function doExport(){
+  if(!path.length){alert('포인트가 없습니다.');return;}
+  var sel=document.getElementById('courseSelect');
+  var name=sel.options[sel.selectedIndex].text;
+  var km=poly?(poly.getLength()/1000).toFixed(2):'?';
+  document.getElementById('output').value=
+    '// '+name+' | 포인트:'+path.length+'개 | '+km+'km\n'+
+    JSON.stringify(path);
+  warn('✅ Export 완료!',2000);
+}
+
+function doCopy(){
+  doExport();
+  var txt=document.getElementById('output').value;
+  var m=txt.match(/\[\[[\s\S]*\]\]/);
+  var s=m?m[0]:txt;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(s).then(function(){
+      warn('✅ 클립보드 복사 완료!',2000);
+    });
+  }else{
+    document.getElementById('output').select();
+    document.execCommand('copy');
+    warn('✅ 복사됨!',2000);
+  }
+}
+
+function onCourseChange(){
+  var id=parseInt(document.getElementById('courseSelect').value);
+  if(map){
+    var c=CENTERS[id];
+    if(c) map.setCenter(new kakao.maps.LatLng(c[0],c[1]));
+    map.setLevel(4);
+    loadSaved(id);
+  }
+  document.getElementById('output').value='';
+}
+
+window.addEventListener('DOMContentLoaded',function(){
+  var k=localStorage.getItem('tt_key');
+  if(k) document.getElementById('appkey').value=k;
+});
+document.getElementById('appkey').addEventListener('change',function(){
+  localStorage.setItem('tt_key',this.value);
+});
+</script>
+</body>
+</html>
