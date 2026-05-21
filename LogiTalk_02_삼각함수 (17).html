@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>삼각함수 시각화 — LogiTalk</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f8fa;
+  --surface:#ffffff;
+  --surface2:#f0f0f0;
+  --border:#999999;
+
+  --sin:#3b82f6;
+  --cos:#16a34a;
+  --tan:#ea580c;
+  --accent:#3b82f6;
+
+  --text:#111111;
+  --muted:#444444;
+
+  --blue:var(--sin);
+  --green:var(--cos);
+  --gold:var(--tan);
+  --pink:var(--sin);
+  --purple:var(--accent);
+  --red:#ef4444;
+
+  --mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* 헤더 */
+.hd{display:flex;align-items:center;gap:12px;padding:13px 20px;background:var(--surface);border-bottom:1px solid var(--border)}
+.hd-logo{font-size:18px;font-weight:800;color:var(--text)}
+.hd-logo span{color:var(--accent)}
+.hd-slogan{font-size:11px;color:var(--muted);font-weight:500}
+.hd-tag{margin-left:auto;font-size:11px;padding:3px 10px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-weight:600}
+
+.wrap{max-width:1080px;margin:0 auto;padding:24px 16px 80px}
+
+/* 히어로 */
+.hero{text-align:center;padding:24px 0 28px;border-bottom:1px solid var(--border);margin-bottom:28px}
+.hero-label{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.hero-title{font-size:22px;font-weight:700;margin-bottom:10px;color:var(--text)}
+.hero-title em{color:var(--accent);font-style:normal}
+.hero-formulas{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
+.hf{font-family:var(--mono);font-size:13px;font-weight:600;padding:6px 14px;border-radius:6px;border:1px solid}
+.hf.sin{color:var(--sin);background:rgba(59,130,246,.07);border-color:rgba(59,130,246,.25)}
+.hf.cos{color:var(--cos);background:rgba(22,163,74,.07);border-color:rgba(22,163,74,.25)}
+.hf.tan{color:var(--tan);background:rgba(234,88,12,.07);border-color:rgba(234,88,12,.2)}
+.hero-sub{font-size:13px;color:var(--muted);line-height:1.7}
+
+/* 섹션 타이틀 */
+.sec-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* 카드 */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:20px;animation:fadeUp .35s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.card:nth-child(2){animation-delay:.05s}
+.card:nth-child(3){animation-delay:.1s}
+.card:nth-child(4){animation-delay:.15s}
+
+/* ── 1. 단위원 ── */
+.cv-wrap{background:#f0f4ff;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+canvas{display:block;width:100%}
+
+.angle-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.angle-lbl{font-size:13px;color:var(--muted);min-width:16px}
+.angle-val{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent);min-width:52px;text-align:right}
+input[type=range].angle{flex:1;height:4px;border-radius:2px;-webkit-appearance:none;appearance:none;background:#dde3f0;cursor:pointer;outline:none}
+input[type=range].angle::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 1px 4px rgba(59,130,246,.35)}
+
+.trig-vals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.tv{background:var(--surface2);border-radius:8px;padding:12px;text-align:center;border:1px solid var(--border)}
+.tv-lbl{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}
+.tv-lbl.s{color:var(--sin)}.tv-lbl.c{color:var(--cos)}.tv-lbl.t{color:var(--tan)}
+.tv-num{font-family:var(--mono);font-size:18px;font-weight:700}
+.tv-num.s{color:var(--sin)}.tv-num.c{color:var(--cos)}.tv-num.t{color:var(--tan)}
+
+.explain-box{background:var(--surface2);border-radius:8px;padding:12px 14px;border:1px solid var(--border)}
+.ei{display:flex;align-items:flex-start;gap:9px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:1.65;color:var(--text)}
+.ei:last-child{border-bottom:none}
+.ei-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:6px}
+
+/* ── 1-연동 그래프 ── */
+.linked-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media(max-width:700px){.linked-grid{grid-template-columns:1fr}}
+.linked-label{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px}
+
+/* ── 2. 사분면 ── */
+.quadrant-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px}
+@media(max-width:600px){.quadrant-grid{grid-template-columns:1fr}}
+.quad-card{border-radius:8px;padding:14px 16px;background:var(--surface2);border:1px solid var(--border)}
+.quad-title{font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text);display:flex;align-items:center;gap:6px}
+.quad-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:var(--mono);background:var(--border);color:var(--muted)}
+.quad-signs{display:flex;flex-direction:column;gap:4px;margin-top:4px}
+.qs{font-size:13px;font-family:var(--mono);display:flex;gap:8px;align-items:center}
+.qs-label{color:var(--muted);font-size:12px;min-width:30px}
+.pos{color:var(--cos);font-weight:700}.neg{color:var(--red);font-weight:700}
+
+/* 사분면 인디케이터 */
+.quad-indicator{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.qi{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);color:var(--muted);transition:all .25s;cursor:default;background:var(--surface2)}
+.qi.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ── 단계별 티칭 ── */
+.step-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.step-btn{padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:var(--surface2);font-family:'Noto Sans KR',sans-serif;transition:all .2s;white-space:nowrap}
+.step-btn:hover{border-color:#666;color:var(--text)}
+.step-btn.active{background:var(--text);color:#fff;border-color:var(--text)}
+.step-btn b{font-weight:800}
+
+.step-desc{font-size:13px;color:var(--muted);padding:10px 14px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--border);margin-bottom:16px;line-height:1.65}
+
+/* 파라미터 입력 블록 */
+.param-inputs{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.pinput-block{border-radius:10px;padding:14px 18px;border:1px solid var(--border);background:var(--surface2);min-width:200px;flex:1;position:relative;overflow:hidden}
+.pinput-block::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.pinput-block.pa::before{background:var(--sin)}
+.pinput-block.pb::before{background:var(--cos)}
+.pinput-block.pc::before{background:var(--tan)}
+.pinput-block.pd::before{background:#888}
+
+.pinput-label{display:flex;align-items:baseline;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.pinput-name{font-size:13px;font-weight:700;color:var(--text)}
+.pinput-hint{font-size:11px;color:var(--muted);margin-left:auto}
+
+.pinput-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.pm-btn{width:34px;height:34px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-size:16px;cursor:pointer;font-weight:700;color:var(--text);transition:all .15s;line-height:1;display:flex;align-items:center;justify-content:center}
+.pm-btn:hover{background:var(--text);color:#fff;border-color:var(--text)}
+
+.num-input{width:80px;height:36px;border-radius:6px;border:2px solid var(--border);background:var(--surface);font-family:var(--mono);font-size:20px;font-weight:700;text-align:center;outline:none;transition:border-color .2s;color:var(--text)}
+.num-input:focus{border-color:var(--text)}
+.num-input.a{color:var(--sin)}.num-input.b{color:var(--cos)}.num-input.c{color:var(--tan)}.num-input.d{color:#555}
+.num-input::-webkit-inner-spin-button,.num-input::-webkit-outer-spin-button{opacity:0.4}
+
+.pinput-effect{font-size:12px;color:var(--muted);padding:6px 10px;background:var(--surface);border-radius:6px;border:1px solid var(--border);line-height:1.5}
+
+/* ── 3. 그래프 ── */
+.gtabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.gtab{padding:7px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);color:var(--muted);transition:all .2s;background:var(--surface2);font-family:'Noto Sans KR',sans-serif}
+.gtab:hover{color:var(--text)}
+.gtab.active.sin{background:rgba(59,130,246,.08);border-color:var(--sin);color:var(--sin)}
+.gtab.active.cos{background:rgba(22,163,74,.08);border-color:var(--cos);color:var(--cos)}
+.gtab.active.tan{background:rgba(234,88,12,.08);border-color:var(--tan);color:var(--tan)}
+
+.formula-display{font-family:var(--mono);font-size:14px;font-weight:700;padding:9px 16px;border-radius:8px;display:inline-block;margin-bottom:16px;background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+
+/* 파라미터 슬라이더 */
+.param-main{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:700px){.param-main{grid-template-columns:1fr}}
+.param-block{background:var(--surface2);border-radius:10px;padding:14px 16px;border:1px solid var(--border);position:relative;overflow:hidden}
+.param-block::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.param-block.pa::before{background:var(--sin)}
+.param-block.pb::before{background:var(--cos)}
+.param-block.pc::before{background:var(--tan)}
+.param-block.pd::before{background:var(--muted)}
+
+.param-name{font-size:13px;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:6px;color:var(--text)}
+.param-name .letter{font-family:var(--mono);font-size:15px;font-weight:800}
+.param-name .letter.a{color:var(--sin)}
+.param-name .letter.b{color:var(--cos)}
+.param-name .letter.c{color:var(--tan)}
+.param-name .letter.d{color:var(--muted)}
+
+.param-meaning{font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5}
+.param-val-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.param-val{font-family:var(--mono);font-size:20px;font-weight:800;min-width:50px}
+.param-val.a{color:var(--sin)}.param-val.b{color:var(--cos)}.param-val.c{color:var(--tan)}.param-val.d{color:var(--muted)}
+.param-effect{font-size:11px;padding:5px 9px;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--muted);line-height:1.5}
+
+input[type=range].pr{width:100%;height:4px;border-radius:2px;-webkit-appearance:none;appearance:none;background:#dde3f0;cursor:pointer;outline:none;margin-bottom:6px}
+input[type=range].pr::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;cursor:pointer;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+input[type=range].pr.a::-webkit-slider-thumb{background:var(--sin)}
+input[type=range].pr.b::-webkit-slider-thumb{background:var(--cos)}
+input[type=range].pr.c::-webkit-slider-thumb{background:var(--tan)}
+input[type=range].pr.d::-webkit-slider-thumb{background:var(--muted)}
+
+/* d 행 */
+.param-d-row{background:var(--surface2);border-radius:10px;padding:12px 16px;border:1px solid var(--border);position:relative;overflow:hidden;margin-bottom:14px}
+.param-d-row::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--muted)}
+.param-d-inner{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.param-d-inner .param-name{margin-bottom:0;white-space:nowrap}
+.param-d-inner .param-val{min-width:40px}
+.param-d-inner input[type=range].pr{flex:1;min-width:120px;margin-bottom:0}
+.param-d-inner .param-effect{flex:2;min-width:160px;margin-bottom:0}
+
+/* 그래프 캔버스 */
+.graph-canvas-wrap{background:#f0f4ff;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px}
+.graph-info-bar{display:flex;gap:14px;flex-wrap:wrap;padding:9px 14px;background:var(--surface2);border-top:1px solid var(--border);font-size:12px;font-family:var(--mono)}
+.gi-item{display:flex;flex-direction:column;gap:2px}
+.gi-label{font-size:10px;color:var(--muted);font-family:'Noto Sans KR',sans-serif}
+.gi-val{font-weight:700;color:var(--text)}
+.gi-val.sin{color:var(--sin)}.gi-val.cos{color:var(--cos)}.gi-val.tan{color:var(--tan)}.gi-val.white{color:var(--text)}
+
+/* 그래프 설명 */
+.graph-explain-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:600px){.graph-explain-grid{grid-template-columns:1fr}}
+.ge-item{background:var(--surface2);border-radius:8px;padding:11px 13px;border:1px solid var(--border);font-size:13px;line-height:1.65;display:flex;align-items:flex-start;gap:8px;color:var(--text)}
+.ge-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:6px}
+
+/* 리셋 버튼 */
+.reset-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Noto Sans KR',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;margin-bottom:12px}
+.reset-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── 4. 특수각 표 ── */
+.stbl{width:100%;border-collapse:collapse;margin-top:10px}
+.stbl th{font-size:12px;color:var(--muted);font-weight:600;padding:9px 10px;text-align:center;border-bottom:1px solid var(--border);background:var(--surface2);font-family:'Noto Sans KR',sans-serif}
+.stbl td{font-size:13px;padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;font-family:'Noto Sans KR',sans-serif}
+.stbl tr:last-child td{border-bottom:none}
+.stbl td.ac{color:var(--text);font-weight:600;font-family:var(--mono)}
+.stbl td.sc{color:var(--sin);font-weight:600;font-family:var(--mono)}
+.stbl td.cc{color:var(--cos);font-weight:600;font-family:var(--mono)}
+.stbl td.tc{color:var(--tan);font-weight:600;font-family:var(--mono)}
+.stbl tr:hover td{background:var(--surface2)}
+
+/* TTS */
+.tts-bar{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;margin-bottom:22px;flex-wrap:wrap}
+.tts-lbl{font-size:12px;color:var(--muted);flex:1}
+.tts-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:6px;border:1px solid var(--border);font-family:'Noto Sans KR',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;background:var(--surface);color:var(--muted);white-space:nowrap}
+.tts-btn:hover{border-color:var(--accent);color:var(--accent)}
+.tts-btn.stop{border-color:rgba(239,68,68,.3);color:var(--red)}
+.tts-btn.on{animation:glow 1s ease-in-out infinite alternate}
+@keyframes glow{from{opacity:1}to{opacity:.5}}
+
+/* 주기 바 */
+.period-bar{height:4px;border-radius:2px;background:var(--border);margin:8px 0;overflow:hidden}
+.period-fill{height:100%;border-radius:2px;transition:width .3s ease}
+.period-fill.sin{background:var(--sin)}
+.period-fill.cos{background:var(--cos)}
+.period-fill.tan{background:var(--tan)}
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <div class="hd-logo">Logi<span>Talk</span></div>
+  <div class="hd-slogan">개념이 보이면 수학이 쉬워진다</div>
+  <div class="hd-tag">삼각함수</div>
+</div>
+
+<div class="wrap">
+
+  <!-- 히어로 -->
+  <div class="hero">
+    <div class="hero-label">Trigonometric Functions</div>
+    <div class="hero-title">삼각함수, <em>그래프로 완전히 이해하기</em></div>
+    <div class="hero-formulas">
+      <span class="hf sin">sin θ = y &nbsp;<span style="font-size:11px;opacity:.7">(단위원 y좌표)</span></span>
+      <span class="hf cos">cos θ = x &nbsp;<span style="font-size:11px;opacity:.7">(단위원 x좌표)</span></span>
+      <span class="hf tan">tan θ = y/x &nbsp;<span style="font-size:11px;opacity:.7">= sin/cos</span></span>
+    </div>
+    <div class="hero-sub">슬라이더를 움직여 보세요 — 단위원과 그래프가 실시간으로 연동됩니다</div>
+  </div>
+
+
+
+  <!-- ① 단위원 -->
+  <div class="card">
+    <div class="sec-title">① 단위원 (Unit Circle) — 각도와 삼각함수값의 관계</div>
+
+    <div class="quad-indicator">
+      <div class="qi q1" id="qi1">1사분면 (0°~90°)</div>
+      <div class="qi q2" id="qi2">2사분면 (90°~180°)</div>
+      <div class="qi q3" id="qi3">3사분면 (180°~270°)</div>
+      <div class="qi q4" id="qi4">4사분면 (270°~360°)</div>
+    </div>
+
+    <!-- 슬라이더 -->
+    <div class="angle-row" style="margin-bottom:18px">
+      <span class="angle-lbl">θ</span>
+      <input type="range" class="angle" id="slAngle" min="0" max="360" step="1" value="45">
+      <span class="angle-val" id="valAngle">45°</span>
+    </div>
+
+    <!-- 값 표시 -->
+    <div class="trig-vals" style="margin-bottom:18px">
+      <div class="tv"><div class="tv-lbl s">sin θ</div><div class="tv-num s" id="sinVal">0.707</div></div>
+      <div class="tv"><div class="tv-lbl c">cos θ</div><div class="tv-num c" id="cosVal">0.707</div></div>
+      <div class="tv"><div class="tv-lbl t">tan θ</div><div class="tv-num t" id="tanVal">1.000</div></div>
+    </div>
+
+    <!-- 단위원 + 연동 그래프 (좌우 배치) -->
+    <div class="linked-grid">
+      <!-- 단위원 -->
+      <div>
+        <div class="linked-label">단위원</div>
+        <div class="cv-wrap"><canvas id="cv-unit" height="300"></canvas></div>
+      </div>
+      <!-- sin 연동 그래프 -->
+      <div>
+        <div class="linked-label" style="color:var(--pink)">sin θ 그래프 <span style="font-size:10px;color:var(--muted);font-weight:400">— 점 P의 y좌표 추적</span></div>
+        <div class="cv-wrap"><canvas id="cv-linked-sin" height="135"></canvas></div>
+        <div style="height:8px"></div>
+        <div class="linked-label" style="color:var(--blue)">cos θ 그래프 <span style="font-size:10px;color:var(--muted);font-weight:400">— 점 P의 x좌표 추적</span></div>
+        <div class="cv-wrap"><canvas id="cv-linked-cos" height="135"></canvas></div>
+      </div>
+    </div>
+
+    <!-- 설명 -->
+    <div class="explain-box" style="margin-top:16px">
+      <div class="ei"><div class="ei-dot" style="background:var(--pink)"></div><span><strong style="color:var(--pink)">sin θ</strong> = 점 P의 <strong>y좌표</strong> — 위쪽이 양수, 아래쪽이 음수</span></div>
+      <div class="ei"><div class="ei-dot" style="background:var(--blue)"></div><span><strong style="color:var(--blue)">cos θ</strong> = 점 P의 <strong>x좌표</strong> — 오른쪽이 양수, 왼쪽이 음수</span></div>
+      <div class="ei"><div class="ei-dot" style="background:var(--gold)"></div><span><strong style="color:var(--gold)">tan θ</strong> = sin θ / cos θ — 기울기를 의미해요</span></div>
+      <div class="ei"><div class="ei-dot" style="background:var(--purple)"></div><span>sin²θ + cos²θ <strong>= 1</strong> — 항상 성립! (피타고라스 항등식)</span></div>
+    </div>
+  </div>
+
+  <!-- ② 사분면과 부호 -->
+  <div class="card">
+    <div class="sec-title">② 사분면에 따른 부호 변화 — 핵심 암기 포인트</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.7">위의 슬라이더를 돌리면 사분면이 바뀌면서 sin·cos·tan의 <strong style="color:var(--text)">부호가 바뀌는 것</strong>을 확인하세요.</div>
+    <div class="quadrant-grid">
+      <div class="quad-card q1">
+        <div class="quad-title q1"><span class="quad-badge q1">1사분면</span> 0° ~ 90°</div>
+        <div class="quad-signs">
+          <div class="qs"><span class="qs-label">sin</span><span class="pos">+ 양수</span><span style="color:var(--muted);font-size:11px">y > 0</span></div>
+          <div class="qs"><span class="qs-label">cos</span><span class="pos">+ 양수</span><span style="color:var(--muted);font-size:11px">x > 0</span></div>
+          <div class="qs"><span class="qs-label">tan</span><span class="pos">+ 양수</span><span style="color:var(--muted);font-size:11px">y/x > 0</span></div>
+        </div>
+      </div>
+      <div class="quad-card q2">
+        <div class="quad-title q2"><span class="quad-badge q2">2사분면</span> 90° ~ 180°</div>
+        <div class="quad-signs">
+          <div class="qs"><span class="qs-label">sin</span><span class="pos">+ 양수</span><span style="color:var(--muted);font-size:11px">y > 0</span></div>
+          <div class="qs"><span class="qs-label">cos</span><span class="neg">- 음수</span><span style="color:var(--muted);font-size:11px">x < 0</span></div>
+          <div class="qs"><span class="qs-label">tan</span><span class="neg">- 음수</span><span style="color:var(--muted);font-size:11px">y/x < 0</span></div>
+        </div>
+      </div>
+      <div class="quad-card q3">
+        <div class="quad-title q3"><span class="quad-badge q3">3사분면</span> 180° ~ 270°</div>
+        <div class="quad-signs">
+          <div class="qs"><span class="qs-label">sin</span><span class="neg">- 음수</span><span style="color:var(--muted);font-size:11px">y < 0</span></div>
+          <div class="qs"><span class="qs-label">cos</span><span class="neg">- 음수</span><span style="color:var(--muted);font-size:11px">x < 0</span></div>
+          <div class="qs"><span class="qs-label">tan</span><span class="pos">+ 양수</span><span style="color:var(--muted);font-size:11px">y/x > 0</span></div>
+        </div>
+      </div>
+      <div class="quad-card q4">
+        <div class="quad-title q4"><span class="quad-badge q4">4사분면</span> 270° ~ 360°</div>
+        <div class="quad-signs">
+          <div class="qs"><span class="qs-label">sin</span><span class="neg">- 음수</span><span style="color:var(--muted);font-size:11px">y < 0</span></div>
+          <div class="qs"><span class="qs-label">cos</span><span class="pos">+ 양수</span><span style="color:var(--muted);font-size:11px">x > 0</span></div>
+          <div class="qs"><span class="qs-label">tan</span><span class="neg">- 음수</span><span style="color:var(--muted);font-size:11px">y/x < 0</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);padding:10px 14px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--purple)">
+      💡 암기 팁: <strong style="color:var(--text)">1사분면 모두 +, 2사분면 sin만 +, 3사분면 tan만 +, 4사분면 cos만 +</strong>
+    </div>
+  </div>
+
+  <!-- ③ a·b·c·d 그래프 변환 -->
+  <div class="card">
+    <div class="sec-title">③ 그래프 변환 — 단계별로 이해하기</div>
+
+    <!-- 함수 선택 탭 -->
+    <div class="gtabs">
+      <button class="gtab active sin" id="tab-sin" onclick="switchGraph('sin')">sin 그래프</button>
+      <button class="gtab cos" id="tab-cos" onclick="switchGraph('cos')">cos 그래프</button>
+      <button class="gtab tan" id="tab-tan" onclick="switchGraph('tan')">tan 그래프</button>
+    </div>
+
+    <!-- 단계 선택 -->
+    <div class="step-row" id="stepRow">
+      <button class="step-btn active" onclick="goStep(0)">① y = sin x</button>
+      <button class="step-btn" onclick="goStep(1)">② y = <b>a</b>·sin x</button>
+      <button class="step-btn" onclick="goStep(2)">③ y = sin(<b>b</b>x)</button>
+      <button class="step-btn" onclick="goStep(3)">④ y = sin(x + <b>c</b>)</button>
+      <button class="step-btn" onclick="goStep(4)">⑤ y = sin x + <b>d</b></button>
+      <button class="step-btn" onclick="goStep(5)">⑥ 전체 조합</button>
+    </div>
+
+    <!-- 현재 수식 -->
+    <div class="formula-display sin" id="graphFormula">y = sin x</div>
+
+    <!-- 단계 설명 -->
+    <div class="step-desc" id="stepDesc">
+      가장 기본이 되는 그래프입니다. 진폭 1, 주기 2π, 이동 없음.
+    </div>
+
+    <!-- 파라미터 입력 -->
+    <div class="param-inputs" id="paramInputs">
+
+      <div class="pinput-block pa" id="blockA" style="display:none">
+        <div class="pinput-label">
+          <span class="letter a">a</span>
+          <span class="pinput-name">진폭 (Amplitude)</span>
+          <span class="pinput-hint">그래프의 최댓값·최솟값을 결정</span>
+        </div>
+        <div class="pinput-row">
+          <button class="pm-btn" onclick="adjustVal('A',-0.5)">−</button>
+          <input type="number" class="num-input a" id="numA" value="1" step="0.5" min="0.5" max="5" oninput="onNumInput('A')">
+          <button class="pm-btn" onclick="adjustVal('A', 0.5)">＋</button>
+        </div>
+        <div class="pinput-effect" id="effectA">최댓값 = <strong>1.0</strong>, 최솟값 = <strong>-1.0</strong></div>
+      </div>
+
+      <div class="pinput-block pb" id="blockB" style="display:none">
+        <div class="pinput-label">
+          <span class="letter b">b</span>
+          <span class="pinput-name">주기 배율 (Period)</span>
+          <span class="pinput-hint">주기 = 2π ÷ b</span>
+        </div>
+        <div class="pinput-row">
+          <button class="pm-btn" onclick="adjustVal('B',-0.5)">−</button>
+          <input type="number" class="num-input b" id="numB" value="1" step="0.5" min="0.5" max="6" oninput="onNumInput('B')">
+          <button class="pm-btn" onclick="adjustVal('B', 0.5)">＋</button>
+        </div>
+        <div class="pinput-effect" id="effectB">주기 = 2π ≈ 6.28</div>
+      </div>
+
+      <div class="pinput-block pc" id="blockC" style="display:none">
+        <div class="pinput-label">
+          <span class="letter c">c</span>
+          <span class="pinput-name">위상이동 (Phase Shift)</span>
+          <span class="pinput-hint">c > 0 이면 왼쪽, c &lt; 0 이면 오른쪽 이동</span>
+        </div>
+        <div class="pinput-row">
+          <button class="pm-btn" onclick="adjustVal('C',-0.5)">−</button>
+          <input type="number" class="num-input c" id="numC" value="0" step="0.5" min="-6.28" max="6.28" oninput="onNumInput('C')">
+          <button class="pm-btn" onclick="adjustVal('C', 0.5)">＋</button>
+        </div>
+        <div class="pinput-effect" id="effectC">이동 없음 (c = 0)</div>
+      </div>
+
+      <div class="pinput-block pd" id="blockD" style="display:none">
+        <div class="pinput-label">
+          <span class="letter d">d</span>
+          <span class="pinput-name">수직이동 (Vertical Shift)</span>
+          <span class="pinput-hint">그래프 전체가 위(+) 아래(-) 이동</span>
+        </div>
+        <div class="pinput-row">
+          <button class="pm-btn" onclick="adjustVal('D',-0.5)">−</button>
+          <input type="number" class="num-input d" id="numD" value="0" step="0.5" min="-4" max="4" oninput="onNumInput('D')">
+          <button class="pm-btn" onclick="adjustVal('D', 0.5)">＋</button>
+        </div>
+        <div class="pinput-effect" id="effectD">이동 없음 (d = 0)</div>
+      </div>
+
+    </div>
+
+    <!-- 리셋 -->
+    <button class="reset-btn" onclick="resetParams()">↺ 리셋</button>
+
+    <!-- 그래프 캔버스 -->
+    <div class="graph-canvas-wrap">
+      <canvas id="cv-graph" height="260"></canvas>
+      <div class="graph-info-bar">
+        <div class="gi-item"><div class="gi-label">주기</div><div class="gi-val white" id="gPeriod">2π</div></div>
+        <div class="gi-item"><div class="gi-label">진폭</div><div class="gi-val white" id="gAmpl">1.0</div></div>
+        <div class="gi-item"><div class="gi-label">최댓값</div><div class="gi-val" id="gMax" style="color:var(--green)">1.0</div></div>
+        <div class="gi-item"><div class="gi-label">최솟값</div><div class="gi-val" id="gMin" style="color:var(--red)">-1.0</div></div>
+        <div class="gi-item"><div class="gi-label">y절편</div><div class="gi-val white" id="gYint">0.000</div></div>
+      </div>
+    </div>
+
+    <!-- 설명 박스 -->
+    <div class="graph-explain-grid" id="graphExplain"></div>
+  </div>
+
+  <!-- ④ 특수각 표 -->
+  <div class="card">
+    <div class="sec-title">④ 특수각 삼각함수값 — 반드시 외워야 할 값</div>
+    <table class="stbl">
+      <thead>
+        <tr>
+          <th>θ (도)</th>
+          <th>θ (라디안)</th>
+          <th>sin θ</th>
+          <th>cos θ</th>
+          <th>tan θ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="ac">0°</td><td style="color:var(--muted);font-family:var(--mono)">0</td><td class="sc">0</td><td class="cc">1</td><td class="tc">0</td></tr>
+        <tr><td class="ac">30°</td><td style="color:var(--muted);font-family:var(--mono)">π/6</td><td class="sc">1/2</td><td class="cc">√3/2</td><td class="tc">1/√3 = √3/3</td></tr>
+        <tr><td class="ac">45°</td><td style="color:var(--muted);font-family:var(--mono)">π/4</td><td class="sc">√2/2</td><td class="cc">√2/2</td><td class="tc">1</td></tr>
+        <tr><td class="ac">60°</td><td style="color:var(--muted);font-family:var(--mono)">π/3</td><td class="sc">√3/2</td><td class="cc">1/2</td><td class="tc">√3</td></tr>
+        <tr><td class="ac">90°</td><td style="color:var(--muted);font-family:var(--mono)">π/2</td><td class="sc">1</td><td class="cc">0</td><td class="tc" style="color:var(--red)">정의 불가</td></tr>
+        <tr><td class="ac">120°</td><td style="color:var(--muted);font-family:var(--mono)">2π/3</td><td class="sc">√3/2</td><td class="cc">-1/2</td><td class="tc">-√3</td></tr>
+        <tr><td class="ac">135°</td><td style="color:var(--muted);font-family:var(--mono)">3π/4</td><td class="sc">√2/2</td><td class="cc">-√2/2</td><td class="tc">-1</td></tr>
+        <tr><td class="ac">150°</td><td style="color:var(--muted);font-family:var(--mono)">5π/6</td><td class="sc">1/2</td><td class="cc">-√3/2</td><td class="tc">-1/√3</td></tr>
+        <tr><td class="ac">180°</td><td style="color:var(--muted);font-family:var(--mono)">π</td><td class="sc">0</td><td class="cc">-1</td><td class="tc">0</td></tr>
+        <tr><td class="ac">270°</td><td style="color:var(--muted);font-family:var(--mono)">3π/2</td><td class="sc">-1</td><td class="cc">0</td><td class="tc" style="color:var(--red)">정의 불가</td></tr>
+        <tr><td class="ac">360°</td><td style="color:var(--muted);font-family:var(--mono)">2π</td><td class="sc">0</td><td class="cc">1</td><td class="tc">0</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:12px;font-size:12px;color:var(--muted);padding:10px 14px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--blue)">
+      💡 <strong style="color:var(--text)">패턴 보기:</strong> sin 0°·30°·45°·60°·90° = √0/2, √1/2, √2/2, √3/2, √4/2 순서로 분자가 증가해요!
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+// ──────────────────────────────────────────
+// 전역 상태
+// ──────────────────────────────────────────
+var angle = 45;
+var graphType = 'sin';
+var GCOL = {
+  sin: { line:'#3b82f6', glow:'rgba(59,130,246,.3)', ref:'rgba(59,130,246,.06)' },
+  cos: { line:'#16a34a', glow:'rgba(22,163,74,.3)',  ref:'rgba(22,163,74,.06)'  },
+  tan: { line:'#ea580c', glow:'rgba(234,88,12,.25)', ref:'rgba(234,88,12,.06)'  }
+};
+
+// ──────────────────────────────────────────
+// 단위원 그리기
+// ──────────────────────────────────────────
+function drawUnit(){
+  var cv = document.getElementById('cv-unit');
+  cv.width = cv.parentElement.clientWidth;
+  var W = cv.width, H = cv.height;
+  var ctx = cv.getContext('2d');
+  ctx.fillStyle = '#f8faff'; ctx.fillRect(0,0,W,H);
+  var cx = W/2, cy = H/2, R = Math.min(W,H)*0.37;
+  var rad = angle * Math.PI / 180;
+  var px = cx + R * Math.cos(rad);
+  var py = cy - R * Math.sin(rad);
+
+  // 그리드
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1;
+  for(var i = -3; i <= 3; i++){
+    ctx.beginPath(); ctx.moveTo(cx+i*R/2, 0); ctx.lineTo(cx+i*R/2, H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, cy+i*R/2); ctx.lineTo(W, cy+i*R/2); ctx.stroke();
+  }
+
+  // 축
+  ctx.strokeStyle = '#333333'; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke();
+
+  // 축 숫자 라벨 — 흰 배경 + 굵은 폰트로 선명하게
+  function labelWithBg(text, x, y, align){
+    ctx.font = 'bold 11px JetBrains Mono,monospace';
+    ctx.textAlign = align || 'center';
+    var tw = ctx.measureText(text).width;
+    var pad = 3;
+    var bx = align==='right' ? x-tw-pad : align==='left' ? x-pad : x-tw/2-pad;
+    ctx.fillStyle = 'rgba(247,248,250,0.9)';
+    ctx.fillRect(bx, y-11, tw+pad*2, 14);
+    ctx.fillStyle = '#111111';
+    ctx.fillText(text, x, y);
+  }
+  labelWithBg('1',  cx+R+16, cy+4);
+  labelWithBg('-1', cx-R-8,  cy+4, 'right');
+  labelWithBg('1',  cx+6,    cy-R-3, 'left');
+  labelWithBg('-1', cx+6,    cy+R+13, 'left');
+
+  // x, y 축 이름
+  ctx.fillStyle = '#333333'; ctx.font = 'bold 11px JetBrains Mono,monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('x', W-10, cy-8);
+  ctx.fillText('y', cx+12, 14);
+
+  // 단위원
+  ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2);
+  ctx.strokeStyle = '#aaaaaa'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // sin 음영
+  ctx.fillStyle = 'rgba(59,130,246,.06)';
+  ctx.fillRect(px-1, Math.min(cy,py), 2, Math.abs(py-cy));
+
+  // cos 선 (초록)
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(px,cy);
+  ctx.strokeStyle = '#16a34a'; ctx.lineWidth = 2.5; ctx.shadowBlur = 0; ctx.stroke();
+
+  // sin 선 (파랑)
+  ctx.beginPath(); ctx.moveTo(px,cy); ctx.lineTo(px,py);
+  ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2.5; ctx.stroke();
+
+  // 반지름
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(px,py);
+  ctx.strokeStyle = '#555555'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // 각도 호
+  ctx.beginPath(); ctx.arc(cx, cy, R*0.22, 0, -rad, rad < 0);
+  ctx.strokeStyle = '#777777'; ctx.lineWidth = 1.2; ctx.stroke();
+
+  // θ 라벨
+  ctx.fillStyle = '#333333'; ctx.font = 'bold 11px JetBrains Mono,monospace'; ctx.textAlign = 'center';
+  ctx.fillText('θ', cx + R*0.3*Math.cos(rad/2)+3, cy - R*0.3*Math.sin(rad/2)+3);
+
+  // 점 P
+  ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2);
+  ctx.fillStyle = '#111111'; ctx.fill();
+
+  // cos 라벨
+  ctx.fillStyle = '#16a34a'; ctx.font = 'bold 10px JetBrains Mono,monospace'; ctx.textAlign = 'center';
+  var cly = cy + (py > cy ? 14 : -6);
+  ctx.fillText('cosθ', (cx+px)/2, cly);
+
+  // sin 라벨
+  ctx.fillStyle = '#3b82f6'; ctx.textAlign = 'center';
+  var slx = px + (px > cx ? 24 : -24);
+  ctx.fillText('sinθ', slx, (cy+py)/2);
+
+  // P 좌표 라벨
+  ctx.fillStyle = '#444444'; ctx.font = '9px JetBrains Mono,monospace';
+  ctx.textAlign = px > cx ? 'left' : 'right';
+  var rad2 = angle * Math.PI / 180;
+  var lx = px + (px > cx ? 10 : -10);
+  var ly = py + (py > cy ? 14 : -6);
+  ctx.fillText('P('+Math.cos(rad2).toFixed(2)+', '+Math.sin(rad2).toFixed(2)+')', lx, ly);
+
+  // 원점
+  ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2);
+  ctx.fillStyle = '#666666'; ctx.fill();
+  ctx.fillStyle = '#444444'; ctx.font = 'bold 10px JetBrains Mono,monospace';
+  ctx.textAlign = 'left'; ctx.fillText('O', cx+5, cy+13);
+}
+
+function updateTrigVals(){
+  var rad = angle * Math.PI / 180;
+  var s = Math.sin(rad), c = Math.cos(rad), t = Math.tan(rad);
+  document.getElementById('sinVal').textContent = s.toFixed(3);
+  document.getElementById('cosVal').textContent = c.toFixed(3);
+  document.getElementById('tanVal').textContent = Math.abs(c) < 0.01 ? '∞' : t.toFixed(3);
+  // 사분면 표시
+  var q = angle <= 90 ? 1 : angle <= 180 ? 2 : angle <= 270 ? 3 : 4;
+  [1,2,3,4].forEach(function(i){
+    var el = document.getElementById('qi'+i);
+    el.className = 'qi q'+i + (i===q ? ' active' : '');
+  });
+}
+
+// ──────────────────────────────────────────
+// 단위원 연동 그래프 (sin / cos)
+// ──────────────────────────────────────────
+function drawLinkedGraph(canvasId, fnType, color, glowColor){
+  var cv = document.getElementById(canvasId);
+  if(!cv) return;
+  cv.width = cv.parentElement.clientWidth;
+  var W = cv.width, H = cv.height;
+  var ctx = cv.getContext('2d');
+  ctx.fillStyle = '#f8faff'; ctx.fillRect(0,0,W,H);
+  var xMin = -0.15, xMax = 2 * Math.PI + 0.25;
+  var yMin = -1.4, yMax = 1.4;
+  var curRad = angle * Math.PI / 180;
+
+  function tx(x){ return (x - xMin) / (xMax - xMin) * W; }
+  function ty(y){ return H - (y - yMin) / (yMax - yMin) * H; }
+
+  // 배경 그리드
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1;
+  [-1, 0, 1].forEach(function(y){
+    ctx.beginPath(); ctx.moveTo(0, ty(y)); ctx.lineTo(W, ty(y)); ctx.stroke();
+  });
+  [Math.PI/2, Math.PI, 3*Math.PI/2, 2*Math.PI].forEach(function(x){
+    ctx.beginPath(); ctx.moveTo(tx(x), 0); ctx.lineTo(tx(x), H); ctx.stroke();
+  });
+
+  // x축
+  ctx.strokeStyle = '#333333'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, ty(0)); ctx.lineTo(W, ty(0)); ctx.stroke();
+
+  // ±1 라벨 — 흰 배경 + 굵게
+  function linkedLabel(text, x, y){
+    ctx.font = 'bold 10px JetBrains Mono,monospace';
+    ctx.textAlign = 'right';
+    var tw = ctx.measureText(text).width;
+    ctx.fillStyle = 'rgba(247,248,250,0.9)';
+    ctx.fillRect(x-tw-2, y-10, tw+4, 13);
+    ctx.fillStyle = '#111111';
+    ctx.fillText(text, x, y);
+  }
+  linkedLabel('1',  tx(0)-3, ty(1)+3);
+  linkedLabel('-1', tx(0)-3, ty(-1)+3);
+
+  // x축 π 라벨 — 흰 배경 + 굵게
+  var xlbls = ['π/2','π','3π/2','2π'];
+  [Math.PI/2, Math.PI, 3*Math.PI/2, 2*Math.PI].forEach(function(x, i){
+    var lx = tx(x), ly = ty(0)+13;
+    ctx.font = 'bold 10px JetBrains Mono,monospace';
+    var tw = ctx.measureText(xlbls[i]).width;
+    ctx.fillStyle = 'rgba(247,248,250,0.9)';
+    ctx.fillRect(lx-tw/2-3, ly-11, tw+6, 14);
+    ctx.fillStyle = '#111111';
+    ctx.textAlign = 'center';
+    ctx.fillText(xlbls[i], lx, ly);
+  });
+
+  // 현재 각도 이전까지의 궤적 (밝은색)
+  ctx.beginPath();
+  ctx.strokeStyle = color; ctx.lineWidth = 2.2;
+  ctx.shadowColor = glowColor; ctx.shadowBlur = 8;
+  var first = true;
+  for(var deg = 0; deg <= 360; deg += 1){
+    var r = deg * Math.PI / 180;
+    if(r > xMax + 0.01) break;
+    var y = fnType === 'sin' ? Math.sin(r) : Math.cos(r);
+    var sx = tx(r), sy = ty(y);
+    if(first){ ctx.moveTo(sx, sy); first = false; }
+    else ctx.lineTo(sx, sy);
+  }
+  ctx.stroke(); ctx.shadowBlur = 0;
+
+  // 현재 각도 위치 수직 점선
+  var normRad = ((curRad % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+  ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = 1.2; ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(tx(normRad), 0); ctx.lineTo(tx(normRad), H); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 현재 함수값 점
+  var curVal = fnType === 'sin' ? Math.sin(curRad) : Math.cos(curRad);
+  ctx.beginPath(); ctx.arc(tx(normRad), ty(curVal), 6, 0, Math.PI*2);
+  ctx.fillStyle = color; ctx.shadowColor = glowColor; ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0;
+
+  // 현재값 → y축 수평 점선 (값 강조)
+  ctx.strokeStyle = color + '55'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(0, ty(curVal)); ctx.lineTo(tx(normRad), ty(curVal)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 값 레이블
+  ctx.fillStyle = color; ctx.font = 'bold 10px JetBrains Mono,monospace'; ctx.textAlign = 'left';
+  var lx = tx(normRad) + 8;
+  if(lx > W - 50) lx = tx(normRad) - 52;
+  ctx.fillText(curVal.toFixed(3), lx, ty(curVal) - 6);
+}
+
+function drawAllLinked(){
+  drawLinkedGraph('cv-linked-sin', 'sin', '#3b82f6', 'rgba(59,130,246,.35)');
+  drawLinkedGraph('cv-linked-cos', 'cos', '#16a34a', 'rgba(22,163,74,.35)');
+}
+
+// ──────────────────────────────────────────
+// 단계별 티칭 설정
+// ──────────────────────────────────────────
+var currentStep = 0;
+
+var STEPS = [
+  {
+    label: ['① y = sin x', '① y = cos x', '① y = tan x'],
+    desc: '가장 기본이 되는 그래프입니다. 진폭 1, 주기 2π, 이동 없음. 모든 변환의 출발점이에요.',
+    show: [],
+    fixed: {a:1, b:1, c:0, d:0}
+  },
+  {
+    label: ['② y = <b>a</b>·sin x', '② y = <b>a</b>·cos x', '② y = <b>a</b>·tan x'],
+    desc: '<b>a</b>는 진폭(amplitude)입니다. a > 1이면 그래프가 위아래로 늘어나고, 0 < a < 1이면 납작해집니다. a가 음수이면 위아래로 뒤집혀요.',
+    show: ['A'],
+    fixed: {b:1, c:0, d:0}
+  },
+  {
+    label: ['③ y = sin(<b>b</b>x)', '③ y = cos(<b>b</b>x)', '③ y = tan(<b>b</b>x)'],
+    desc: '<b>b</b>는 주기 배율입니다. 주기 = 2π ÷ b. b가 2이면 주기가 절반으로 줄어 그래프가 두 배 촘촘해집니다.',
+    show: ['B'],
+    fixed: {a:1, c:0, d:0}
+  },
+  {
+    label: ['④ y = sin(x + <b>c</b>)', '④ y = cos(x + <b>c</b>)', '④ y = tan(x + <b>c</b>)'],
+    desc: '<b>c</b>는 위상이동(phase shift)입니다. c > 0이면 그래프가 왼쪽, c < 0이면 오른쪽으로 이동해요. 이동량 = c ÷ b.',
+    show: ['C'],
+    fixed: {a:1, b:1, d:0}
+  },
+  {
+    label: ['⑤ y = sin x + <b>d</b>', '⑤ y = cos x + <b>d</b>', '⑤ y = tan x + <b>d</b>'],
+    desc: '<b>d</b>는 수직이동입니다. 그래프 전체가 d만큼 위(+) 또는 아래(-)로 평행이동해요.',
+    show: ['D'],
+    fixed: {a:1, b:1, c:0}
+  },
+  {
+    label: ['⑥ y = a·sin(bx+c)+d', '⑥ y = a·cos(bx+c)+d', '⑥ y = a·tan(bx+c)+d'],
+    desc: '이제 a, b, c, d를 모두 조합해 보세요! 각 값을 바꾸며 그래프가 어떻게 변하는지 확인해 보세요.',
+    show: ['A','B','C','D'],
+    fixed: {}
+  }
+];
+
+var STEP_BTNS_HTML = [
+  '① y = sin x',
+  '② y = <b>a</b>·sin x',
+  '③ y = sin(<b>b</b>x)',
+  '④ y = sin(x+<b>c</b>)',
+  '⑤ y = sin x+<b>d</b>',
+  '⑥ 전체 조합'
+];
+
+function goStep(idx){
+  currentStep = idx;
+  var s = STEPS[idx];
+  var gIdx = graphType === 'sin' ? 0 : graphType === 'cos' ? 1 : 2;
+
+  // 스텝 버튼 활성화
+  document.querySelectorAll('.step-btn').forEach(function(b,i){
+    b.classList.toggle('active', i===idx);
+  });
+
+  // 설명
+  document.getElementById('stepDesc').innerHTML = s.desc;
+
+  // 고정값 적용 (fixed에 있는 것만 입력창에 반영 후 잠금)
+  ['A','B','C','D'].forEach(function(k){
+    var el = document.getElementById('num'+k);
+    var block = document.getElementById('block'+k);
+    var fixedVal = s.fixed[k.toLowerCase()];
+    var isShown = s.show.indexOf(k) !== -1;
+
+    block.style.display = isShown ? '' : 'none';
+
+    if(!isShown && fixedVal !== undefined){
+      el.value = fixedVal;
+    }
+  });
+
+  updateGraph();
+}
+
+function getVal(k){
+  var v = parseFloat(document.getElementById('num'+k).value);
+  return isNaN(v) ? (k==='A'||k==='B'?1:0) : v;
+}
+
+function adjustVal(k, delta){
+  var el = document.getElementById('num'+k);
+  var v = parseFloat(el.value) || 0;
+  var min = parseFloat(el.min), max = parseFloat(el.max);
+  var nv = Math.round((v + delta) * 10) / 10;
+  if(!isNaN(min)) nv = Math.max(min, nv);
+  if(!isNaN(max)) nv = Math.min(max, nv);
+  el.value = nv;
+  updateGraph();
+}
+
+function onNumInput(k){
+  updateGraph();
+}
+
+// ──────────────────────────────────────────
+// 그래프 탭 전환
+// ──────────────────────────────────────────
+function switchGraph(type){
+  graphType = type;
+  ['sin','cos','tan'].forEach(function(t){
+    document.getElementById('tab-'+t).className = 'gtab ' + (t===type ? 'active ' : '') + t;
+  });
+  // 스텝 버튼 라벨 업데이트
+  var gIdx = type==='sin'?0:type==='cos'?1:2;
+  var btns = document.querySelectorAll('.step-btn');
+  var labels = [
+    ['① y = sin x','② y = <b>a</b>·sin x','③ y = sin(<b>b</b>x)','④ y = sin(x+<b>c</b>)','⑤ y = sin x+<b>d</b>','⑥ 전체'],
+    ['① y = cos x','② y = <b>a</b>·cos x','③ y = cos(<b>b</b>x)','④ y = cos(x+<b>c</b>)','⑤ y = cos x+<b>d</b>','⑥ 전체'],
+    ['① y = tan x','② y = <b>a</b>·tan x','③ y = tan(<b>b</b>x)','④ y = tan(x+<b>c</b>)','⑤ y = tan x+<b>d</b>','⑥ 전체']
+  ];
+  btns.forEach(function(b,i){ b.innerHTML = labels[gIdx][i]; });
+  updateExplain(type);
+  updateGraph();
+}
+
+function updateGraph(){
+  var a = getVal('A'), b = getVal('B'), c = getVal('C'), d = getVal('D');
+
+  // 수식 표시
+  var fn = graphType;
+  var fmEl = document.getElementById('graphFormula');
+  var s = STEPS[currentStep];
+  var gIdx = graphType==='sin'?0:graphType==='cos'?1:2;
+
+  // 수식 동적 생성
+  var aStr = a===1?'':(a===-1?'-':a+'·');
+  var bStr = b===1?'x':(b+'x');
+  var cStr = c===0?'':(c>0?'+'+c:''+c);
+  var dStr = d===0?'':(d>0?' + '+d:' - '+Math.abs(d));
+  var formula;
+  if(currentStep===0) formula = 'y = '+fn+'(x)';
+  else if(currentStep===1) formula = 'y = '+a+'·'+fn+'(x)';
+  else if(currentStep===2) formula = 'y = '+fn+'('+b+'x)';
+  else if(currentStep===3) formula = c===0?'y = '+fn+'(x)':'y = '+fn+'(x '+( c>0?'+ ':'')+ c+')';
+  else if(currentStep===4) formula = d===0?'y = '+fn+'(x)':'y = '+fn+'(x) '+(d>0?'+ ':'')+ d;
+  else formula = 'y = '+a+'·'+fn+'('+b+'x'+(c===0?'':( c>0?'+':'')+c)+')'+(d===0?'':(d>0?' + ':' ')+d);
+
+  fmEl.textContent = formula;
+  fmEl.className = 'formula-display ' + graphType;
+
+  // 효과 텍스트 (요소가 보일 때만 업데이트)
+  var period = graphType==='tan'?Math.PI/b:2*Math.PI/b;
+  function setEl(id, html, isHTML){
+    var el = document.getElementById(id);
+    if(!el) return;
+    if(isHTML) el.innerHTML = html; else el.textContent = html;
+  }
+  setEl('effectA','최댓값 = <strong>'+(a+d).toFixed(1)+'</strong>, 최솟값 = <strong>'+(-a+d).toFixed(1)+'</strong>',true);
+  setEl('effectB','주기 = <strong>'+(graphType==='tan'?'π':'2π')+'÷'+b+' ≈ '+period.toFixed(2)+'</strong>',true);
+  var cDir = c>0?'왼쪽으로 '+(c/b).toFixed(2)+' 이동':c<0?'오른쪽으로 '+Math.abs(c/b).toFixed(2)+' 이동':'이동 없음 (c = 0)';
+  setEl('effectC', cDir, false);
+  setEl('effectD', d===0?'이동 없음 (d = 0)':(d>0?'위로 ':'아래로 ')+Math.abs(d).toFixed(1)+' 이동', false);
+
+  // 인포바
+  document.getElementById('gAmpl').textContent = graphType==='tan'?'∞':a.toFixed(1);
+  document.getElementById('gMax').textContent  = graphType==='tan'?'∞':(a+d).toFixed(1);
+  document.getElementById('gMin').textContent  = graphType==='tan'?'-∞':(-a+d).toFixed(1);
+  var pStr = graphType==='tan'?'π/'+b+' ≈ '+period.toFixed(2):'2π/'+b+' ≈ '+period.toFixed(2);
+  document.getElementById('gPeriod').textContent = pStr;
+  var yint = graphType==='sin'?a*Math.sin(c)+d:graphType==='cos'?a*Math.cos(c)+d:(Math.abs(Math.cos(c))<0.01?null:a*Math.tan(c)+d);
+  document.getElementById('gYint').textContent = yint===null?'∞':yint.toFixed(3);
+
+  drawGraph();
+}
+
+function resetParams(){
+  document.getElementById('numA').value = 1;
+  document.getElementById('numB').value = 1;
+  document.getElementById('numC').value = 0;
+  document.getElementById('numD').value = 0;
+  goStep(0);
+}
+
+// ──────────────────────────────────────────
+// 그래프 그리기
+// ──────────────────────────────────────────
+function drawGraph(){
+  var cv = document.getElementById('cv-graph');
+  cv.width = cv.parentElement.clientWidth;
+  var W = cv.width, H = cv.height;
+  var ctx = cv.getContext('2d');
+  ctx.fillStyle = '#f8faff'; ctx.fillRect(0,0,W,H);
+
+  var a = getVal('A'), b = getVal('B'), c = getVal('C'), d = getVal('D');
+
+  var xMin = -1.2*Math.PI, xMax = 2.5*Math.PI;
+  var yRange = graphType==='tan' ? 5 : (Math.abs(a)+Math.abs(d)+1.8);
+  var yMin = -yRange, yMax = yRange;
+
+  function tx(x){ return (x-xMin)/(xMax-xMin)*W; }
+  function ty(y){ return H - (y-yMin)/(yMax-yMin)*H; }
+
+  // 그리드 (배경)
+  ctx.strokeStyle = 'rgba(0,0,0,0.07)'; ctx.lineWidth = 1;
+  [-1, 0, 1, 2].forEach(function(n){
+    var x = n * Math.PI;
+    ctx.beginPath(); ctx.moveTo(tx(x),0); ctx.lineTo(tx(x),H); ctx.stroke();
+  });
+  for(var yg = Math.ceil(yMin); yg <= Math.floor(yMax); yg++){
+    if(yg === 0) continue;
+    ctx.beginPath(); ctx.moveTo(0,ty(yg)); ctx.lineTo(W,ty(yg)); ctx.stroke();
+  }
+
+  // y=d 기준선
+  if(Math.abs(d) > 0.05){
+    ctx.strokeStyle = 'rgba(5,150,105,.35)'; ctx.lineWidth = 1.2; ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.moveTo(0,ty(d)); ctx.lineTo(W,ty(d)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(5,150,105,.8)'; ctx.font = '9px JetBrains Mono,monospace'; ctx.textAlign = 'left';
+    ctx.fillText('d='+d.toFixed(1), 4, ty(d)-4);
+  }
+
+  // 진폭 영역 음영
+  if(graphType !== 'tan'){
+    ctx.fillStyle = GCOL[graphType].ref;
+    var topY = ty(a+d); var botY = ty(-a+d);
+    ctx.fillRect(0, Math.min(topY,botY), W, Math.abs(topY-botY));
+    ctx.strokeStyle = GCOL[graphType].line; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.2; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(0,ty(a+d)); ctx.lineTo(W,ty(a+d)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,ty(-a+d)); ctx.lineTo(W,ty(-a+d)); ctx.stroke();
+    ctx.globalAlpha = 1; ctx.setLineDash([]);
+
+    // 최대/최소 라벨 — 왼쪽 안쪽, 흰 배경 박스, 굵은 폰트
+    ctx.font = 'bold 12px JetBrains Mono,monospace';
+    var maxTxt = '최대 ' + (a+d).toFixed(1);
+    var minTxt = '최소 ' + (-a+d).toFixed(1);
+    var lx = 10;
+    var maxTw = ctx.measureText(maxTxt).width;
+    var minTw = ctx.measureText(minTxt).width;
+
+    // 최대 라벨
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    ctx.fillRect(lx-3, ty(a+d)-15, maxTw+8, 17);
+    ctx.fillStyle = GCOL[graphType].line;
+    ctx.textAlign = 'left';
+    ctx.fillText(maxTxt, lx, ty(a+d)-2);
+
+    // 최소 라벨
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    ctx.fillRect(lx-3, ty(-a+d)+2, minTw+8, 17);
+    ctx.fillStyle = GCOL[graphType].line;
+    ctx.fillText(minTxt, lx, ty(-a+d)+15);
+  }
+
+  // 축
+  ctx.strokeStyle = '#333333'; ctx.lineWidth = 2; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(0,ty(0)); ctx.lineTo(W,ty(0)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(tx(0),0); ctx.lineTo(tx(0),H); ctx.stroke();
+
+  // x축 눈금 + π 라벨 — 흰 배경 + 굵게
+  var xPoints = [-1, 0, 1, 2];
+  var xlbls2  = ['-π', '0', 'π', '2π'];
+  xPoints.forEach(function(n, i){
+    var xv = n * Math.PI;
+    var bx = tx(xv), axisY = ty(0);
+    // tick
+    ctx.strokeStyle = '#333333'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(bx, axisY-5); ctx.lineTo(bx, axisY+5); ctx.stroke();
+    // 라벨
+    var lbl = xlbls2[i];
+    ctx.font = 'bold 12px JetBrains Mono,monospace';
+    var tw = ctx.measureText(lbl).width;
+    var ly = axisY+22; if(ly > H-4) ly = axisY-10;
+    ctx.fillStyle = 'rgba(247,248,250,0.9)';
+    ctx.fillRect(bx-tw/2-3, ly-12, tw+6, 15);
+    ctx.fillStyle = '#111111';
+    ctx.textAlign = 'center';
+    ctx.fillText(lbl, bx, ly);
+  });
+
+  // 현재 각도 점선
+  var curRad = angle * Math.PI / 180;
+  ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 1.3; ctx.setLineDash([5,4]);
+  ctx.beginPath(); ctx.moveTo(tx(curRad),0); ctx.lineTo(tx(curRad),H); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 메인 곡선
+  var col = GCOL[graphType];
+  ctx.beginPath();
+  ctx.strokeStyle = col.line; ctx.lineWidth = 2.8;
+  ctx.shadowColor = col.glow; ctx.shadowBlur = 10;
+  var first = true;
+  var step = 0.012;
+  for(var x2 = xMin; x2 <= xMax; x2 += step){
+    var y2;
+    if(graphType==='sin') y2 = a*Math.sin(b*x2+c)+d;
+    else if(graphType==='cos') y2 = a*Math.cos(b*x2+c)+d;
+    else {
+      var cv2 = Math.cos(b*x2+c);
+      if(Math.abs(cv2) < 0.07){ first = true; continue; }
+      y2 = a*Math.tan(b*x2+c)+d;
+      if(y2 > yMax*1.2 || y2 < yMin*1.2){ first = true; continue; }
+    }
+    var sy = ty(y2);
+    if(sy < -15 || sy > H+15){ first = true; continue; }
+    if(first){ ctx.moveTo(tx(x2), sy); first = false; }
+    else ctx.lineTo(tx(x2), sy);
+  }
+  ctx.stroke(); ctx.shadowBlur = 0;
+
+  // 현재 각도에서의 함수값 점
+  var curY;
+  if(graphType==='sin') curY = a*Math.sin(b*curRad+c)+d;
+  else if(graphType==='cos') curY = a*Math.cos(b*curRad+c)+d;
+  else {
+    var cv3 = Math.cos(b*curRad+c);
+    curY = Math.abs(cv3)<0.07 ? null : a*Math.tan(b*curRad+c)+d;
+  }
+
+  if(curY !== null && curY >= yMin && curY <= yMax){
+    ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = 1; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(tx(curRad), ty(0)); ctx.lineTo(tx(curRad), ty(curY)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(tx(curRad), ty(curY), 7, 0, Math.PI*2);
+    ctx.fillStyle = col.line; ctx.shadowColor = col.glow; ctx.shadowBlur = 8; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#111111'; ctx.font = 'bold 10px JetBrains Mono,monospace';
+    ctx.textAlign = tx(curRad) < W/2 ? 'left' : 'right';
+    var lx2 = tx(curRad) + (tx(curRad) < W/2 ? 10 : -10);
+    ctx.fillText(curY.toFixed(3), lx2, ty(curY)-8);
+  }
+}
+
+// ──────────────────────────────────────────
+// 그래프 설명
+// ──────────────────────────────────────────
+function updateExplain(type){
+  var items = {
+    sin:[
+      {c:'var(--pink)', t:'<strong>진폭 a</strong>: a가 클수록 그래프의 봉우리가 높아져요. 최댓값 = a, 최솟값 = -a'},
+      {c:'var(--blue)', t:'<strong>주기 b</strong>: 주기 = 2π/b. b가 클수록 그래프가 촘촘해져요 (b=2이면 주기가 절반)'},
+      {c:'var(--gold)', t:'<strong>위상이동 c</strong>: c > 0이면 그래프가 왼쪽으로, c < 0이면 오른쪽으로 이동해요'},
+      {c:'var(--green)', t:'<strong>수직이동 d</strong>: d만큼 위아래 평행이동. 최댓값 = a+d, 최솟값 = -a+d'},
+    ],
+    cos:[
+      {c:'var(--blue)', t:'<strong>진폭 a</strong>: cos 그래프의 y절편은 항상 a예요. (0, a)를 지나요'},
+      {c:'var(--pink)', t:'<strong>주기 b</strong>: 주기 = 2π/b. sin과 동일한 원리로 주기가 결정돼요'},
+      {c:'var(--gold)', t:'<strong>위상이동 c</strong>: cos θ = sin(θ+π/2) — sin을 π/2 왼쪽 이동하면 cos!'},
+      {c:'var(--green)', t:'<strong>짝함수</strong>: cos(-θ) = cos(θ) — y축 대칭이에요'},
+    ],
+    tan:[
+      {c:'var(--gold)', t:'<strong>주기 b</strong>: tan의 주기 = π/b. sin·cos의 절반이에요'},
+      {c:'var(--red)', t:'<strong>점근선</strong>: x = π/(2b) + nπ/b 에서 정의되지 않아요 (cos = 0인 지점)'},
+      {c:'var(--blue)', t:'<strong>진폭 a</strong>: tan은 무한대로 발산하므로 a는 기울기 배율에 가까워요'},
+      {c:'var(--purple)', t:'<strong>홀함수</strong>: tan(-θ) = -tan(θ) — 원점 대칭이에요'},
+    ],
+  };
+  document.getElementById('graphExplain').innerHTML = items[type].map(function(e){
+    return '<div class="ge-item"><div class="ge-dot" style="background:'+e.c+'"></div><span>'+e.t+'</span></div>';
+  }).join('');
+}
+
+// ──────────────────────────────────────────
+// TTS
+// ──────────────────────────────────────────
+var TTS_TEXTS = [
+  '삼각함수는 단위원, 즉 반지름이 1인 원을 이용해 정의해요.',
+  '각도 세타에서 단위원 위의 점 P를 잡으면, 그 점의 y좌표가 sin 세타, x좌표가 cos 세타입니다.',
+  'sin의 값은 -1에서 1 사이이고, cos도 마찬가지예요.',
+  'tan 세타는 sin 세타를 cos 세타로 나눈 값으로, cos가 0인 지점에서는 정의되지 않아요.',
+  '사분면에 따라 부호가 바뀌는데, 1사분면은 모두 양수, 2사분면은 sin만 양수, 3사분면은 tan만 양수, 4사분면은 cos만 양수입니다.',
+  '그래프에서 a는 진폭, b는 주기 배율, c는 위상이동, d는 수직이동을 나타내요.',
+  'a 슬라이더를 크게 하면 그래프의 높이가 높아지고, b를 크게 하면 주기가 짧아져 그래프가 촘촘해집니다.',
+];
+var ttsIdx = 0, ttsSpeaking = false;
+
+function ttsAll(){
+  if(!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  ttsIdx = 0; ttsSpeaking = true;
+  document.getElementById('ttsAllBtn').style.display = 'none';
+  document.getElementById('ttsStopBtn').style.display = 'inline-flex';
+  ttsNext();
+}
+function ttsNext(){
+  if(!ttsSpeaking || ttsIdx >= TTS_TEXTS.length){ ttsFinish(); return; }
+  var u = new SpeechSynthesisUtterance(TTS_TEXTS[ttsIdx++]);
+  u.lang = 'ko-KR'; u.rate = 0.95;
+  u.onend = function(){ if(ttsSpeaking) setTimeout(ttsNext, 200); };
+  speechSynthesis.speak(u);
+}
+function ttsStop(){
+  ttsSpeaking = false;
+  window.speechSynthesis && speechSynthesis.cancel();
+  ttsFinish();
+}
+function ttsFinish(){
+  document.getElementById('ttsAllBtn').style.display = 'inline-flex';
+  document.getElementById('ttsStopBtn').style.display = 'none';
+}
+
+// ──────────────────────────────────────────
+// 슬라이더 이벤트
+// ──────────────────────────────────────────
+document.getElementById('slAngle').addEventListener('input', function(){
+  angle = parseInt(this.value);
+  document.getElementById('valAngle').textContent = angle + '°';
+  drawUnit();
+  updateTrigVals();
+  drawGraph();
+  drawAllLinked();
+});
+
+// ──────────────────────────────────────────
+// 초기화
+// ──────────────────────────────────────────
+window.addEventListener('load', function(){
+  drawUnit();
+  updateTrigVals();
+  updateExplain('sin');
+  goStep(0);
+  drawAllLinked();
+});
+
+window.addEventListener('resize', function(){
+  drawUnit();
+  drawGraph();
+  drawAllLinked();
+});
+</script>
+</body>
+</html>
