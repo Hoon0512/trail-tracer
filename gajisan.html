@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>영남알프스 🏔 가지산 v1</title>
+<script>
+// 카카오맵 SDK 동적 로드 함수
+function loadKakaoSDK(callback) {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=009d779e0836e36bfdad5c85304e8c12&autoload=false';
+  script.onload = function() {
+    if(typeof kakao !== 'undefined' && kakao.maps) {
+      kakao.maps.load(callback);
+    } else {
+      showMapFallback();
+    }
+  };
+  script.onerror = function() {
+    showMapFallback();
+  };
+  document.head.appendChild(script);
+}
+function showMapFallback() {
+  var mapDiv = document.getElementById('map');
+  if(mapDiv) {
+    mapDiv.style.background = '#d8f3dc';
+    mapDiv.style.display = 'flex';
+    mapDiv.style.alignItems = 'center';
+    mapDiv.style.justifyContent = 'center';
+    mapDiv.style.flexDirection = 'column';
+    mapDiv.style.gap = '8px';
+    mapDiv.innerHTML = '<div style="font-size:36px">🗺️</div>'
+      + '<div style="font-size:13px;font-weight:700;color:#2d6a4f;">카카오맵 로드 중...</div>'
+      + '<div style="font-size:11px;color:#666;text-align:center;padding:0 20px;">'
+      + 'GitHub Pages에서 정상 작동합니다.<br>'
+      + '<a href="https://Hoon0512.github.io/trail-tracer/gajisan.html" target="_blank" '
+      + 'style="color:#2d6a4f;font-weight:700;">▶ 실제 사이트에서 보기</a></div>';
+  }
+  // 지도 없이도 나머지 UI는 동작하게
+  renderBtns();
+}
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:#eee}
+#app{max-width:480px;margin:0 auto;background:#fff;min-height:100vh;box-shadow:0 0 20px rgba(0,0,0,.15)}
+.hdr{background:linear-gradient(135deg,#2d6a4f,#52b788);color:#fff;padding:14px 16px;text-align:center;display:flex;flex-direction:column;align-items:center}
+.hdr h1{font-size:18px;font-weight:700;text-align:center;width:100%}.hdr p{font-size:11px;opacity:.85;margin-top:2px;text-align:center;width:100%}
+#map{width:100%;height:260px;background:#e8f4e8;position:relative;}
+.elev-wrap{background:#fff;border-top:1px solid #e0e0e0;border-bottom:1px solid #e0e0e0;padding:10px 14px 6px}
+.elev-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.elev-legend{display:flex;flex-direction:column;gap:4px;border:1px solid #ccc;border-radius:4px;padding:5px 8px;background:#fff}
+.leg-title{font-size:11px;color:#555;font-weight:600}
+.leg-items{display:flex;gap:8px;align-items:center}
+.leg-item{display:flex;align-items:center;gap:3px;font-size:11px;color:#555;font-weight:600}
+.leg-dot{width:12px;height:12px;border-radius:2px;display:inline-block}
+.leg-dot.n{background:#4a90d9}.leg-dot.h{background:#f5a0b5}.leg-dot.ve{background:#52b788}.leg-dot.e{background:#2d9c5a}
+.wp-tooltip{background:#333;color:#fff;border:none;border-radius:6px;
+  font-size:10px;padding:6px 10px;min-width:200px;max-width:220px;line-height:1.6;
+  word-break:keep-all;text-align:justify;
+  box-shadow:0 2px 8px rgba(0,0,0,.4);}
+.wp-tooltip::before{border-top-color:#333!important;}
+.elev-sum{font-size:13px;font-weight:700;color:#222}
+#eCanvas{display:block;width:100%;height:120px;background:#fff}
+.hikers{padding:10px 12px 4px}
+.hrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.hico{width:36px;flex-shrink:0}
+.hico img{width:34px;height:34px;border-radius:50%;object-fit:cover;display:block}
+.hbody{flex:1}.hname{font-size:11px;font-weight:700}
+.bgbar{background:#e9ecef;border-radius:8px;height:7px;margin-top:3px;overflow:hidden}
+.fgbar{height:100%;border-radius:8px;width:0%}
+.hstat{font-size:11px;color:#888;min-width:90px;text-align:right}
+.sec{padding:10px 12px 0}.sec-title{font-size:12px;font-weight:700;margin-bottom:6px}
+.grid3{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:10px}
+.cbtn{background:#fff;border:1.5px solid #ddd;border-radius:9px;padding:7px 3px;cursor:pointer;font-family:inherit;text-align:center}
+.cbtn:hover{border-color:#52b788;background:#f0fff4}
+.cbtn.on-e{border-color:#2d9e6b;background:#d8f3dc;font-weight:700}
+.cbtn.on-m{border-color:#e9a030;background:#fff3cd;font-weight:700}
+.cbtn .cn{font-size:11px;font-weight:600;color:#222}.cbtn .cd{font-size:10px;color:#888;margin-top:1px}
+.cinfo{margin:0 12px 10px;background:#f8f9fa;border-radius:10px;padding:11px 13px}
+.ci-name{font-size:14px;font-weight:700;margin-bottom:5px}
+.ci-desc{font-size:11px;color:#666;line-height:1.65;margin-bottom:7px}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-size:10px;padding:2px 7px;border-radius:20px;background:#d8f3dc;color:#2d6a4f;font-weight:600}
+.tag.m{background:#fff3cd;color:#b07a00}
+.ctrl{display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid #eee}
+#btnGo{flex:1;background:#2d6a4f;color:#fff;border:none;border-radius:9px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+#btnGo:hover{background:#40916c}#btnGo.busy{background:#aaa;cursor:default}
+#btnRst{background:#fff;border:1.5px solid #ddd;border-radius:9px;padding:12px 14px;font-size:13px;cursor:pointer;font-family:inherit}
+#btnRst:hover{border-color:#e76f51;color:#e76f51}
+.spd-wrap{display:flex;flex-direction:column;align-items:center;gap:2px}
+.spd-wrap label{font-size:10px;color:#888}.spd-wrap input{width:70px;accent-color:#2d6a4f}
+
+/* 나의 레벨 테스트 */
+#myTestWrap{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;}
+#myTestBox{background:#fff;border-radius:16px;padding:20px;width:90%;max-width:420px;max-height:90vh;overflow-y:auto;}
+.test-title{font-size:16px;font-weight:700;color:#2d6a4f;text-align:center;margin-bottom:4px;}
+.test-sub{font-size:11px;color:#888;text-align:center;margin-bottom:16px;}
+.test-q{font-size:13px;font-weight:700;color:#333;margin-bottom:8px;margin-top:14px;}
+.test-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.test-opt{background:#f8f9fa;border:2px solid #ddd;border-radius:8px;padding:8px 6px;font-size:12px;cursor:pointer;text-align:center;font-family:inherit;transition:all 0.2s;}
+.test-opt.sel{border-color:#2d6a4f;background:#d8f3dc;font-weight:700;color:#2d6a4f;}
+.test-opt:hover{border-color:#52b788;}
+.test-opt.gender-opt{font-size:20px;padding:12px;}
+#btnTestNext{width:100%;background:#2d6a4f;color:#fff;border:none;border-radius:9px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:16px;}
+#btnTestNext:disabled{background:#aaa;cursor:default;}
+/* 이모지 선택 */
+.emoji-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0;}
+.emoji-opt{font-size:28px;border:2px solid #ddd;border-radius:10px;padding:8px;cursor:pointer;text-align:center;background:#f8f9fa;}
+.emoji-opt.sel{border-color:#2d6a4f;background:#d8f3dc;}
+/* 결과 화면 */
+.result-emoji{font-size:60px;text-align:center;margin:10px 0;}
+.result-level{font-size:20px;font-weight:700;text-align:center;color:#2d6a4f;margin-bottom:6px;}
+.result-msg{font-size:12px;color:#555;text-align:center;line-height:1.7;margin-bottom:12px;}
+/* 4번째 캐릭터 */
+.my-row{background:#f0fff4;border-radius:10px;padding:6px 8px;margin-bottom:8px;border:2px solid #2d6a4f;}
+</style>
+</head>
+<body>
+<!-- 나의 레벨 테스트 모달 -->
+<div id="myTestWrap" style="display:none">
+  <div id="myTestBox">
+    <div class="test-title">🏔 나의 등산 레벨은?</div>
+    <div class="test-sub">8가지 질문으로 나의 등산 능력을 확인해보세요!</div>
+    <div id="testContent"></div>
+    <button id="btnTestNext" disabled onclick="testNext()">다음 →</button>
+    <button id="btnTestPrev" onclick="testPrev()" style="width:100%;background:#fff;border:1.5px solid #ddd;border-radius:9px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:6px;color:#666;display:none;">← 이전</button>
+    <button onclick="skipTest()" style="width:100%;background:none;border:none;padding:8px;font-size:11px;color:#aaa;cursor:pointer;font-family:inherit;margin-top:4px;">← 뒤로</button>
+  </div>
+</div>
+
+<!-- Yes/No 확인 팝업 -->
+<div id="myTestConfirm" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:28px 24px;width:85%;max-width:380px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:12px;">🏔</div>
+    <div style="font-size:16px;font-weight:700;color:#2d6a4f;margin-bottom:8px;">나의 등산 레벨 테스트</div>
+    <div style="font-size:13px;color:#666;line-height:1.6;margin-bottom:24px;">8가지 질문으로 나의 등산 능력을 확인하고<br>4명과 함께 시뮬레이션해보세요!</div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="confirmNo()" style="flex:1;padding:12px;border:1.5px solid #ddd;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#888;">No</button>
+      <button onclick="confirmYes()" style="flex:1;padding:12px;border:none;border-radius:10px;background:#2d6a4f;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#fff;">Yes</button>
+    </div>
+  </div>
+</div>
+<div id="app">
+  <div class="hdr"><h1>🏔 영남알프스 — <span id="bukhanTip" style="position:relative;cursor:help;border-bottom:1px dotted rgba(255,255,255,0.6)">가지산<div style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:28px;z-index:999;background:rgba(30,30,30,0.95);color:#fff;border-radius:8px;padding:12px 16px;font-size:10px;font-weight:400;line-height:1.8;width:max-content;max-width:300px;box-shadow:0 4px 12px rgba(0,0,0,.4);white-space:normal;text-align:left;" id="bukhanTipBox">영남알프스의 최고봉으로 해발 1,241m입니다.<br>울산·밀양·청도에 걸쳐 있으며<br>영남알프스 8봉 인증 대상 산입니다.<br>가을 억새밭과 겨울 상고대가 유명하며<br>석남사·운문령 등 다양한 등산로가 있습니다.<br>정상에서 영남알프스 전 봉우리가<br>360도로 조망됩니다.</div></span></h1><p>영남알프스 탐방코스 시뮬레이터</p></div>
+  <div id="map"></div>
+  <div class="elev-wrap">
+    <div class="elev-header">
+      <div class="elev-legend">
+        <div class="leg-title" id="elevSummitBadge" style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#1b7e3e;">🏔 <span id="elevSummitLabel">코스를 선택하세요</span></div>
+      </div>
+      <div class="elev-sum" id="elevSum"></div>
+    </div>
+    <div style="position:relative;width:100%;height:120px;">
+      <canvas id="eCanvas" role="img" aria-label="가지산 코스 고도 프로필"></canvas>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;" id="elevWaypts"></div>
+  </div>
+  <div class="hikers">
+    <div class="hrow my-row" id="myRow" style="display:none">
+      <div class="hico"><div id="myEmoji" style="width:34px;height:34px;border-radius:50%;border:3px solid #2d6a4f;background:#d8f3dc;display:flex;align-items:center;justify-content:center;font-size:20px;"></div></div>
+      <div class="hbody"><div class="hname" id="myName">나</div><div class="bgbar"><div class="fgbar" id="b3" style="background:#2d6a4f"></div></div></div>
+      <div class="hstat" id="s3">0.0km · 0분</div>
+      <button onclick="retakeTest()" style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px 4px;flex-shrink:0;" title="레벨 재테스트">🔄</button>
+    </div>
+    <div class="hrow">
+      <div class="hico"><img id="img0" src="" style="border:2px solid #74c69d"></div>
+      <div class="hbody"><div class="hname">등린이</div><div class="bgbar"><div class="fgbar" id="b0" style="background:#74c69d"></div></div></div>
+      <div class="hstat" id="s0">0.0km · 0분</div>
+    </div>
+    <div class="hrow">
+      <div class="hico"><img id="img1" src="" style="border:2px solid #f4a261"></div>
+      <div class="hbody"><div class="hname">산춘기</div><div class="bgbar"><div class="fgbar" id="b1" style="background:#f4a261"></div></div></div>
+      <div class="hstat" id="s1">0.0km · 0분</div>
+    </div>
+    <div class="hrow">
+      <div class="hico"><img id="img2" src="" style="border:2px solid #e63946"></div>
+      <div class="hbody"><div class="hname">산대장</div><div class="bgbar"><div class="fgbar" id="b2" style="background:#e63946"></div></div></div>
+      <div class="hstat" id="s2">0.0km · 0분</div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-title">🟢 쉬움 (2개)</div>
+    <div class="grid3" id="gEasy"></div>
+    <div class="sec-title">🔵 보통 (2개)</div>
+    <div class="grid3" id="gMed"></div>
+  </div>
+  <div class="cinfo">
+    <div class="ci-name" id="ciName">코스를 선택하세요</div>
+    <div class="ci-desc" id="ciDesc">위의 버튼을 눌러 탐방코스를 선택하고 ▶출발을 눌러보세요!</div>
+    <div class="tags" id="ciTags"></div>
+  </div>
+  <div class="ctrl">
+    <button id="btnGo" onclick="goClick()">▶ 출발</button>
+    <button id="btnRst" onclick="resetClick()">↺ 리셋</button>
+    <div class="spd-wrap"><label>⏩ 속도</label><input type="range" id="spd" min="1" max="10" value="5"></div>
+  </div>
+</div>
+
+<script>
+var FACES = ["data:image/jpeg;base64,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","data:image/jpeg;base64,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","data:image/jpeg;base64,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"];
+var BC = ['#74c69d','#f4a261','#e63946'];
+var RATIOS = [0.55,0.82,1.0];
+var KMH = [2.0,3.0,4.0];
+
+var GPS9 = [[37.655101,126.949647],[37.654991,126.949676],[37.654966,126.949806],[37.654919,126.949982],[37.654865,126.950197],[37.654793,126.950517],[37.654737,126.950676],[37.654665,126.95088],[37.65459,126.95099],[37.654552,126.951211],[37.65448,126.951438],[37.654487,126.951534],[37.654476,126.951577],[37.654417,126.951733],[37.654397,126.95177],[37.654377,126.951843],[37.654298,126.95192],[37.654181,126.952067],[37.654161,126.952093],[37.654125,126.952147],[37.654086,126.952317],[37.654057,126.952509],[37.654014,126.952603],[37.653893,126.952696],[37.653794,126.952728],[37.653751,126.95283],[37.653701,126.952934],[37.653647,126.953068],[37.6536,126.953181],[37.653584,126.953255],[37.653573,126.953362],[37.653551,126.953453],[37.653494,126.953538],[37.653454,126.953575],[37.653411,126.953651],[37.653407,126.953725],[37.653461,126.953804],[37.653456,126.953855],[37.653486,126.953918],[37.653495,126.954005],[37.653488,126.954076],[37.653452,126.954161],[37.653445,126.954221],[37.653513,126.954402],[37.653506,126.954453],[37.653486,126.954476],[37.653387,126.954496],[37.653321,126.954487],[37.653206,126.954507],[37.653101,126.954547],[37.653033,126.954612],[37.652806,126.954731],[37.652855,126.954901],[37.65286,126.955051],[37.652824,126.955176],[37.652759,126.955337],[37.652691,126.955516],[37.652662,126.955692],[37.652673,126.955819],[37.652748,126.955938],[37.652835,126.956014],[37.652962,126.956029],[37.653099,126.95596],[37.653245,126.955873],[37.653383,126.955833],[37.653482,126.955867],[37.653603,126.955991],[37.653615,126.95609],[37.653595,126.956175],[37.653588,126.956226],[37.653586,126.956326],[37.653601,126.956428],[37.653653,126.956558],[37.653728,126.956671],[37.653784,126.956787],[37.653829,126.956898],[37.653849,126.957],[37.653854,126.957102],[37.653854,126.957209],[37.653874,126.95734],[37.65391,126.957498],[37.653967,126.957617],[37.654021,126.957728],[37.654037,126.957804],[37.654023,126.957867],[37.653992,126.957915],[37.653938,126.957969],[37.653798,126.958074],[37.653672,126.958178],[37.653577,126.9583],[37.653458,126.958439],[37.653424,126.958502],[37.653426,126.958581],[37.65346,126.958674],[37.653535,126.958708],[37.653677,126.958711],[37.653818,126.958674],[37.653909,126.958708],[37.653947,126.958787],[37.653945,126.958881],[37.653913,126.95902],[37.65385,126.959159],[37.653801,126.959394],[37.653747,126.959606],[37.653684,126.959833],[37.653614,126.95996],[37.653526,126.960071],[37.653427,126.960159],[37.653317,126.960306],[37.653218,126.960507],[37.653134,126.960629],[37.653035,126.960788],[37.652979,126.960896],[37.652934,126.961023],[37.652916,126.961171],[37.6529,126.961338],[37.652891,126.961561],[37.652876,126.961703],[37.652795,126.961794],[37.652693,126.961893],[37.652621,126.961958],[37.652549,126.962074],[37.652477,126.962213],[37.652412,126.962338],[37.652326,126.962517],[37.652378,126.962712],[37.652455,126.962794],[37.652531,126.962791],[37.652621,126.96272],[37.652878,126.962508],[37.65309,126.962445],[37.653166,126.962496],[37.653232,126.962695],[37.653241,126.962802],[37.653234,126.962887],[37.65327,126.962998],[37.653264,126.963026],[37.653225,126.963074],[37.653221,126.963179],[37.653149,126.963332],[37.65321,126.963561],[37.65321,126.963629],[37.653216,126.96372],[37.653203,126.963862],[37.65321,126.963924],[37.653268,126.964117],[37.653338,126.964255],[37.653356,126.96438],[37.653404,126.964525],[37.65348,126.964646],[37.653546,126.964777],[37.653638,126.964904],[37.653735,126.965023],[37.653769,126.965128],[37.65378,126.965236],[37.6538,126.965301],[37.653884,126.965377],[37.653981,126.965507],[37.654023,126.965592],[37.654023,126.965649],[37.653996,126.965686],[37.653951,126.965836],[37.653967,126.965966],[37.654019,126.96604],[37.654042,126.966097],[37.654028,126.966119],[37.65399,126.966199],[37.653981,126.9664],[37.654051,126.966482],[37.654082,126.966618],[37.654141,126.966706],[37.654249,126.966992],[37.654377,126.96717],[37.654414,126.967261],[37.654468,126.967337],[37.654432,126.967371],[37.654423,126.967439],[37.654486,126.967621],[37.65452,126.967737],[37.654567,126.967827],[37.65458,126.967898],[37.654603,126.968097],[37.654578,126.968281],[37.654587,126.968493],[37.654587,126.968641],[37.65461,126.968825],[37.65465,126.968929],[37.654698,126.969009],[37.654768,126.969091],[37.654799,126.969199],[37.654856,126.969255],[37.65493,126.969329],[37.655002,126.969405],[37.65509,126.969589],[37.655135,126.969646],[37.655205,126.969706],[37.655225,126.969771],[37.655257,126.969841],[37.655311,126.969915],[37.655351,126.969969],[37.655421,126.969977],[37.655455,126.970054],[37.655504,126.970164],[37.655565,126.970303],[37.655588,126.97036],[37.655597,126.970448],[37.655583,126.970516],[37.65559,126.970626],[37.655604,126.970731],[37.655599,126.97083],[37.655629,126.970955],[37.655633,126.971105],[37.655629,126.971266],[37.655678,126.971544],[37.655635,126.97168],[37.655627,126.971816],[37.65562,126.97185],[37.655663,126.971946],[37.655701,126.972045],[37.655737,126.972156],[37.655717,126.972281],[37.655723,126.972385],[37.655701,126.972496],[37.655724,126.972561],[37.655818,126.972652],[37.655944,126.972813],[37.656034,126.972884],[37.656138,126.97302],[37.656197,126.973088],[37.656179,126.973122],[37.656064,126.973162],[37.656082,126.973227],[37.656035,126.973295],[37.655981,126.97355],[37.656012,126.973717],[37.655992,126.973938],[37.656042,126.974224],[37.656033,126.97434],[37.656037,126.974445],[37.656055,126.974502],[37.656044,126.974635],[37.656055,126.974725],[37.656048,126.974825],[37.656055,126.974978],[37.656094,126.975105],[37.656139,126.975247],[37.656224,126.975315],[37.65626,126.975473],[37.656274,126.975595],[37.656314,126.975652],[37.656459,126.975774],[37.656625,126.975887],[37.656713,126.975961],[37.65679,126.975966],[37.656862,126.975949],[37.65692,126.976006],[37.65695,126.976091],[37.656959,126.976164],[37.656932,126.976218],[37.656851,126.976247],[37.656826,126.976269],[37.65681,126.976315],[37.656824,126.976453],[37.656776,126.976578],[37.656716,126.976844],[37.656738,126.976907],[37.656765,126.976958],[37.656781,126.977012],[37.65681,126.977068],[37.656803,126.977102],[37.656783,126.97715],[37.656785,126.977204],[37.656844,126.977303],[37.656849,126.977428],[37.656889,126.977539],[37.657002,126.97776],[37.657022,126.977839],[37.657069,126.97789],[37.657076,126.977949],[37.657108,126.978003],[37.657105,126.97806],[37.657137,126.978136],[37.657166,126.978298],[37.657128,126.978377],[37.657207,126.978422],[37.65729,126.978465],[37.657288,126.978561],[37.657306,126.978675],[37.657367,126.978728],[37.65743,126.978847],[37.657423,126.978975],[37.657482,126.979048],[37.657484,126.979193],[37.657558,126.979238],[37.657624,126.979303],[37.657673,126.979366],[37.65773,126.979422],[37.657833,126.979442],[37.65793,126.979383],[37.658002,126.979402],[37.658056,126.979346],[37.658094,126.979207],[37.65809,126.97915],[37.658038,126.979045],[37.658038,126.978958],[37.658049,126.978887],[37.658184,126.978595],[37.658317,126.978374],[37.658394,126.97832],[37.658484,126.978431],[37.658567,126.978527],[37.658651,126.978569],[37.658725,126.978521],[37.658761,126.978462],[37.658842,126.978408],[37.658876,126.978357],[37.65886,126.978303],[37.658811,126.978229],[37.658761,126.97817],[37.658741,126.978037],[37.658664,126.977986]]; //
+
+var COURSE_GPS = {
+  // 0: 석남터널코스 (석남터널→중봉→가지산정상) 
+  0:[[35.608408, 129.025607], [35.608516, 129.025643], [35.608589, 129.025692], [35.608722, 129.02572], [35.608716, 129.025659], [35.608764, 129.025608], [35.608822, 129.025535], [35.60882, 129.025477], [35.608911, 129.025454], [35.608948, 129.025389], [35.609029, 129.025421], [35.609101, 129.025423], [35.609147, 129.025353], [35.609139, 129.025286], [35.609149, 129.02522], [35.609177, 129.025144], [35.60919, 129.025072], [35.609218, 129.02501], [35.609248, 129.024944], [35.60927, 129.02487], [35.609273, 129.024804], [35.609265, 129.024751], [35.609248, 129.024701], [35.60922, 129.024637], [35.609214, 129.024601], [35.609233, 129.024541], [35.609195, 129.024504], [35.609214, 129.024449], [35.609199, 129.024427], [35.609206, 129.024366], [35.6092, 129.024317], [35.609183, 129.024278], [35.609196, 129.024203], [35.609239, 129.024144], [35.609216, 129.02408], [35.60929, 129.024054], [35.609278, 129.02401], [35.60927, 129.023954], [35.609304, 129.023892], [35.609281, 129.023833], [35.609277, 129.023759], [35.609312, 129.023704], [35.609284, 129.023648], [35.609253, 129.023609], [35.609247, 129.023551], [35.609216, 129.023506], [35.609192, 129.02347], [35.609172, 129.02343], [35.609146, 129.023369], [35.609127, 129.023302], [35.609133, 129.023217], [35.609114, 129.023142], [35.6091, 129.023081], [35.609078, 129.023006], [35.60905, 129.022923], [35.609023, 129.022823], [35.609, 129.022723], [35.608981, 129.022617], [35.608963, 129.02249], [35.608947, 129.022368], [35.608937, 129.022291], [35.609104, 129.022256], [35.609269, 129.02223], [35.609432, 129.022201], [35.609586, 129.022172], [35.609737, 129.022148], [35.609879, 129.022119], [35.609967, 129.02211], [35.610096, 129.022118], [35.610267, 129.022117], [35.610404, 129.02211], [35.61053, 129.022118], [35.610704, 129.022117], [35.610863, 129.022055], [35.610947, 129.022019], [35.611046, 129.022016], [35.61112, 129.022045], [35.611227, 129.022106], [35.611312, 129.022105], [35.611544, 129.022114], [35.611751, 129.022168], [35.611951, 129.022063], [35.612074, 129.021956], [35.612242, 129.021905], [35.61253, 129.021885], [35.612618, 129.021898], [35.612771, 129.021888], [35.6129, 129.02188], [35.613072, 129.021846], [35.613264, 129.021798], [35.613368, 129.021768], [35.613458, 129.02177], [35.613613, 129.021815], [35.613726, 129.021807], [35.613811, 129.02179], [35.613954, 129.021747], [35.614069, 129.021727], [35.614146, 129.021699], [35.614259, 129.021583], [35.614368, 129.021514], [35.614482, 129.021432], [35.614586, 129.021387], [35.614691, 129.02131], [35.614776, 129.02124], [35.614881, 129.021146], [35.61494, 129.020996], [35.615006, 129.020841], [35.615055, 129.020734], [35.615121, 129.020546], [35.615182, 129.020398], [35.61524, 129.020273], [35.615315, 129.020098], [35.615384, 129.01989], [35.615455, 129.019701], [35.615521, 129.019527], [35.615575, 129.019398], [35.615621, 129.019217], [35.615665, 129.019012], [35.615704, 129.018811], [35.615746, 129.01863], [35.615802, 129.018474], [35.615857, 129.018305], [35.615906, 129.018085], [35.615929, 129.017901], [35.615962, 129.017692], [35.615967, 129.017524], [35.615976, 129.017381], [35.616027, 129.017175], [35.616047, 129.017046], [35.616061, 129.016886], [35.6161, 129.016719], [35.616132, 129.016554], [35.616194, 129.016343], [35.616249, 129.016149], [35.616301, 129.015976], [35.61636, 129.015834], [35.616421, 129.01569], [35.616451, 129.015519], [35.616465, 129.015371], [35.616453, 129.015257], [35.616433, 129.015116], [35.61641, 129.014989], [35.616385, 129.014867], [35.616369, 129.014786], [35.616306, 129.014636], [35.616234, 129.01446], [35.616187, 129.01431], [35.616138, 129.014187], [35.616095, 129.014067], [35.61602, 129.013947], [35.615981, 129.01386], [35.615918, 129.013707], [35.61584, 129.013515], [35.615767, 129.013325], [35.615717, 129.013211], [35.61568, 129.013111], [35.615649, 129.012975], [35.615608, 129.012819], [35.615566, 129.012677], [35.615534, 129.012555], [35.615486, 129.012455], [35.615486, 129.012353], [35.61549, 129.012242], [35.615488, 129.012182], [35.615517, 129.012078], [35.61554, 129.011951], [35.615596, 129.011795], [35.615626, 129.011639], [35.615678, 129.011494], [35.615717, 129.011343], [35.615746, 129.011217], [35.615766, 129.01106], [35.615785, 129.01089], [35.615792, 129.010719], [35.615794, 129.010592], [35.615792, 129.010437], [35.615795, 129.010283], [35.6158, 129.010126], [35.615796, 129.009966], [35.615791, 129.009822], [35.615792, 129.009676], [35.615794, 129.009538], [35.615778, 129.009416], [35.61578, 129.009306], [35.615775, 129.009173], [35.615777, 129.009058], [35.615777, 129.008909], [35.615766, 129.008793], [35.61575, 129.008671], [35.615733, 129.008579], [35.615716, 129.008518], [35.615686, 129.00847], [35.615656, 129.008384], [35.615631, 129.008259], [35.615604, 129.008118], [35.615581, 129.008015], [35.61557, 129.007943], [35.615576, 129.00788], [35.615611, 129.007826], [35.615743, 129.007868], [35.61583, 129.007757], [35.615897, 129.007684], [35.615904, 129.007557], [35.615916, 129.007483], [35.61599, 129.007388], [35.616047, 129.007315], [35.616161, 129.007227], [35.616287, 129.007136], [35.616357, 129.007086], [35.616464, 129.007058], [35.616573, 129.007017], [35.616691, 129.00694], [35.616821, 129.006877], [35.616972, 129.00682], [35.617088, 129.006801], [35.617167, 129.006756], [35.61722, 129.006696], [35.617298, 129.00661], [35.617401, 129.006521], [35.617504, 129.006444], [35.617633, 129.00637], [35.617745, 129.006307], [35.617831, 129.006256], [35.617918, 129.00617], [35.617978, 129.006078], [35.618068, 129.005984], [35.618151, 129.005881], [35.61825, 129.00572], [35.618313, 129.005617], [35.61838, 129.005495], [35.618443, 129.005367], [35.618515, 129.005214], [35.618587, 129.005105], [35.618633, 129.005035], [35.618681, 129.004978], [35.618776, 129.004978], [35.618868, 129.004886], [35.618982, 129.004784], [35.619085, 129.004693], [35.619174, 129.00459], [35.619246, 129.004504], [35.619267, 129.004444], [35.61932, 129.004357], [35.619447, 129.004216], [35.619494, 129.004082], [35.619539, 129.003951], [35.619575, 129.003836], [35.619632, 129.003785], [35.619718, 129.003771], [35.619795, 129.003731], [35.61985, 129.003655], [35.619951, 129.003545], [35.62007, 129.003465], [35.620143, 129.003381], [35.620192, 129.00328], [35.620232, 129.003157], [35.620282, 129.003007], [35.620281, 129.002935], [35.620282, 129.003007], [35.620232, 129.003157], [35.620192, 129.00328], [35.620143, 129.003381], [35.62007, 129.003465], [35.619951, 129.003545], [35.61985, 129.003655], [35.619795, 129.003731], [35.619718, 129.003771], [35.619632, 129.003785], [35.619575, 129.003836], [35.619539, 129.003951], [35.619494, 129.004082], [35.619447, 129.004216], [35.61932, 129.004357], [35.619267, 129.004444], [35.619246, 129.004504], [35.619174, 129.00459], [35.619085, 129.004693], [35.618982, 129.004784], [35.618868, 129.004886], [35.618776, 129.004978], [35.618681, 129.004978], [35.618633, 129.005035], [35.618587, 129.005105], [35.618515, 129.005214], [35.618443, 129.005367], [35.61838, 129.005495], [35.618313, 129.005617], [35.61825, 129.00572], [35.618151, 129.005881], [35.618068, 129.005984], [35.617978, 129.006078], [35.617918, 129.00617], [35.617831, 129.006256], [35.617745, 129.006307], [35.617633, 129.00637], [35.617504, 129.006444], [35.617401, 129.006521], [35.617298, 129.00661], [35.61722, 129.006696], [35.617167, 129.006756], [35.617088, 129.006801], [35.616972, 129.00682], [35.616821, 129.006877], [35.616691, 129.00694], [35.616573, 129.007017], [35.616464, 129.007058], [35.616357, 129.007086], [35.616287, 129.007136], [35.616161, 129.007227], [35.616047, 129.007315], [35.61599, 129.007388], [35.615916, 129.007483], [35.615904, 129.007557], [35.615897, 129.007684], [35.61583, 129.007757], [35.615743, 129.007868], [35.615611, 129.007826], [35.615576, 129.00788], [35.61557, 129.007943], [35.615581, 129.008015], [35.615604, 129.008118], [35.615631, 129.008259], [35.615656, 129.008384], [35.615686, 129.00847], [35.615716, 129.008518], [35.615733, 129.008579], [35.61575, 129.008671], [35.615766, 129.008793], [35.615777, 129.008909], [35.615777, 129.009058], [35.615775, 129.009173], [35.61578, 129.009306], [35.615778, 129.009416], [35.615794, 129.009538], [35.615792, 129.009676], [35.615791, 129.009822], [35.615796, 129.009966], [35.6158, 129.010126], [35.615795, 129.010283], [35.615792, 129.010437], [35.615794, 129.010592], [35.615792, 129.010719], [35.615785, 129.01089], [35.615766, 129.01106], [35.615746, 129.011217], [35.615717, 129.011343], [35.615678, 129.011494], [35.615626, 129.011639], [35.615596, 129.011795], [35.61554, 129.011951], [35.615517, 129.012078], [35.615488, 129.012182], [35.61549, 129.012242], [35.615486, 129.012353], [35.615486, 129.012455], [35.615534, 129.012555], [35.615566, 129.012677], [35.615608, 129.012819], [35.615649, 129.012975], [35.61568, 129.013111], [35.615717, 129.013211], [35.615767, 129.013325], [35.61584, 129.013515], [35.615918, 129.013707], [35.615981, 129.01386], [35.61602, 129.013947], [35.616095, 129.014067], [35.616138, 129.014187], [35.616187, 129.01431], [35.616234, 129.01446], [35.616306, 129.014636], [35.616369, 129.014786], [35.616385, 129.014867], [35.61641, 129.014989], [35.616433, 129.015116], [35.616453, 129.015257], [35.616465, 129.015371], [35.616451, 129.015519], [35.616421, 129.01569], [35.61636, 129.015834], [35.616301, 129.015976], [35.616249, 129.016149], [35.616194, 129.016343], [35.616132, 129.016554], [35.6161, 129.016719], [35.616061, 129.016886], [35.616047, 129.017046], [35.616027, 129.017175], [35.615976, 129.017381], [35.615967, 129.017524], [35.615962, 129.017692], [35.615929, 129.017901], [35.615906, 129.018085], [35.615857, 129.018305], [35.615802, 129.018474], [35.615746, 129.01863], [35.615704, 129.018811], [35.615665, 129.019012], [35.615621, 129.019217], [35.615575, 129.019398], [35.615521, 129.019527], [35.615455, 129.019701], [35.615384, 129.01989], [35.615315, 129.020098], [35.61524, 129.020273], [35.615182, 129.020398], [35.615121, 129.020546], [35.615055, 129.020734], [35.615006, 129.020841], [35.61494, 129.020996], [35.614881, 129.021146], [35.614776, 129.02124], [35.614691, 129.02131], [35.614586, 129.021387], [35.614482, 129.021432], [35.614368, 129.021514], [35.614259, 129.021583], [35.614146, 129.021699], [35.614069, 129.021727], [35.613954, 129.021747], [35.613811, 129.02179], [35.613726, 129.021807], [35.613613, 129.021815], [35.613458, 129.02177], [35.613368, 129.021768], [35.613264, 129.021798], [35.613072, 129.021846], [35.6129, 129.02188], [35.612771, 129.021888], [35.612618, 129.021898], [35.61253, 129.021885], [35.612242, 129.021905], [35.612074, 129.021956], [35.611951, 129.022063], [35.611751, 129.022168], [35.611544, 129.022114], [35.611312, 129.022105], [35.611227, 129.022106], [35.61112, 129.022045], [35.611046, 129.022016], [35.610947, 129.022019], [35.610863, 129.022055], [35.610704, 129.022117], [35.61053, 129.022118], [35.610404, 129.02211], [35.610267, 129.022117], [35.610096, 129.022118], [35.609967, 129.02211], [35.609879, 129.022119], [35.609737, 129.022148], [35.609586, 129.022172], [35.609432, 129.022201], [35.609269, 129.02223], [35.609104, 129.022256], [35.608937, 129.022291], [35.608947, 129.022368], [35.608963, 129.02249], [35.608981, 129.022617], [35.609, 129.022723], [35.609023, 129.022823], [35.60905, 129.022923], [35.609078, 129.023006], [35.6091, 129.023081], [35.609114, 129.023142], [35.609133, 129.023217], [35.609127, 129.023302], [35.609146, 129.023369], [35.609172, 129.02343], [35.609192, 129.02347], [35.609216, 129.023506], [35.609247, 129.023551], [35.609253, 129.023609], [35.609284, 129.023648], [35.609312, 129.023704], [35.609277, 129.023759], [35.609281, 129.023833], [35.609304, 129.023892], [35.60927, 129.023954], [35.609278, 129.02401], [35.60929, 129.024054], [35.609216, 129.02408], [35.609239, 129.024144], [35.609196, 129.024203], [35.609183, 129.024278], [35.6092, 129.024317], [35.609206, 129.024366], [35.609199, 129.024427], [35.609214, 129.024449], [35.609195, 129.024504], [35.609233, 129.024541], [35.609214, 129.024601], [35.60922, 129.024637], [35.609248, 129.024701], [35.609265, 129.024751], [35.609273, 129.024804], [35.60927, 129.02487], [35.609248, 129.024944], [35.609218, 129.02501], [35.60919, 129.025072], [35.609177, 129.025144], [35.609149, 129.02522], [35.609139, 129.025286], [35.609147, 129.025353], [35.609101, 129.025423], [35.609029, 129.025421], [35.608948, 129.025389], [35.608911, 129.025454], [35.60882, 129.025477], [35.608822, 129.025535], [35.608764, 129.025608], [35.608716, 129.025659], [35.608722, 129.02572], [35.608589, 129.025692], [35.608516, 129.025643], [35.608408, 129.025607]],
+  // 1: 석남사코스 (석남사→쌀바위→가지산정상 왕복)
+  1:[[35.618087, 129.039279], [35.618238, 129.038894], [35.618358, 129.038585], [35.618442, 129.038325], [35.618534, 129.038049], [35.618645, 129.037737], [35.618754, 129.037453], [35.618825, 129.037253], [35.61891, 129.037024], [35.618962, 129.036884], [35.619071, 129.036686], [35.619178, 129.036498], [35.619299, 129.036261], [35.619408, 129.036049], [35.61952, 129.035831], [35.619635, 129.035585], [35.619716, 129.035433], [35.6198, 129.035267], [35.619888, 129.03509], [35.620028, 129.034817], [35.620242, 129.034434], [35.620363, 129.034205], [35.620489, 129.033924], [35.620488, 129.033874], [35.620532, 129.033696], [35.620603, 129.033485], [35.620674, 129.033266], [35.620705, 129.033151], [35.62072, 129.033069], [35.620731, 129.032962], [35.620714, 129.032887], [35.620678, 129.032734], [35.620635, 129.032532], [35.620614, 129.032308], [35.620619, 129.03209], [35.620624, 129.031935], [35.620642, 129.03182], [35.620659, 129.031738], [35.620706, 129.031617], [35.620814, 129.031524], [35.620821, 129.031369], [35.62085, 129.031215], [35.620748, 129.031022], [35.620743, 129.030906], [35.620762, 129.030706], [35.620777, 129.030507], [35.62073, 129.030318], [35.620684, 129.030127], [35.620627, 129.029913], [35.620589, 129.029769], [35.620568, 129.02966], [35.620575, 129.029536], [35.620611, 129.029377], [35.620594, 129.029178], [35.620578, 129.028943], [35.620552, 129.028609], [35.620535, 129.028286], [35.62051, 129.028037], [35.620518, 129.027805], [35.620515, 129.027568], [35.620516, 129.027292], [35.620518, 129.027], [35.620523, 129.026738], [35.620522, 129.02639], [35.620523, 129.026194], [35.620518, 129.026053], [35.620503, 129.025785], [35.620489, 129.025506], [35.620457, 129.02526], [35.620432, 129.025016], [35.620417, 129.02487], [35.620428, 129.024575], [35.620507, 129.02434], [35.620591, 129.024135], [35.620648, 129.023984], [35.620704, 129.023743], [35.620769, 129.023447], [35.620783, 129.023058], [35.62076, 129.022831], [35.620689, 129.022581], [35.620611, 129.022276], [35.620585, 129.021944], [35.620557, 129.02159], [35.62061, 129.021266], [35.620626, 129.021145], [35.620685, 129.020851], [35.620756, 129.020522], [35.620809, 129.020261], [35.620853, 129.020066], [35.620897, 129.019852], [35.62106, 129.019583], [35.621234, 129.019287], [35.621382, 129.019023], [35.621579, 129.018683], [35.621701, 129.018438], [35.621824, 129.018184], [35.621922, 129.017982], [35.621992, 129.017824], [35.622169, 129.017636], [35.622362, 129.017433], [35.622509, 129.017274], [35.622669, 129.017105], [35.622878, 129.016878], [35.623093, 129.01666], [35.623256, 129.016482], [35.623428, 129.016301], [35.6236, 129.016115], [35.623793, 129.015916], [35.62396, 129.015741], [35.624176, 129.015503], [35.624371, 129.015296], [35.62455, 129.015121], [35.624758, 129.014919], [35.624959, 129.014723], [35.625179, 129.014505], [35.625388, 129.014301], [35.625605, 129.014083], [35.625773, 129.013927], [35.625965, 129.013741], [35.626205, 129.013513], [35.626409, 129.013308], [35.626622, 129.013087], [35.626801, 129.012901], [35.626966, 129.01272], [35.627131, 129.012559], [35.627255, 129.012424], [35.6274, 129.012271], [35.627547, 129.012111], [35.627723, 129.012041], [35.627964, 129.011945], [35.628154, 129.011862], [35.628341, 129.011773], [35.628592, 129.01168], [35.628724, 129.011622], [35.628881, 129.011549], [35.629014, 129.011492], [35.629082, 129.01135], [35.629182, 129.011198], [35.629301, 129.011168], [35.629357, 129.011056], [35.629353, 129.010918], [35.629317, 129.010749], [35.629312, 129.010522], [35.629344, 129.010352], [35.629357, 129.01012], [35.629334, 129.009866], [35.629323, 129.009739], [35.629314, 129.009617], [35.629282, 129.009478], [35.629235, 129.009361], [35.629182, 129.009277], [35.629133, 129.009221], [35.629087, 129.00917], [35.629027, 129.009127], [35.628966, 129.009101], [35.62891, 129.009083], [35.628798, 129.009044], [35.62866, 129.008999], [35.628615, 129.008971], [35.628548, 129.008963], [35.628478, 129.008945], [35.628375, 129.008918], [35.628328, 129.008903], [35.628263, 129.008873], [35.628178, 129.008808], [35.62811, 129.008734], [35.628028, 129.008652], [35.627964, 129.008551], [35.627911, 129.008495], [35.627806, 129.008418], [35.627697, 129.008341], [35.627574, 129.008199], [35.627429, 129.008063], [35.627328, 129.007928], [35.62722, 129.00776], [35.627121, 129.007647], [35.627003, 129.007529], [35.626908, 129.007424], [35.626838, 129.007342], [35.626796, 129.007258], [35.626779, 129.00723], [35.626696, 129.007184], [35.62658, 129.007123], [35.62636, 129.007101], [35.626324, 129.007081], [35.626217, 129.007001], [35.626096, 129.006937], [35.625978, 129.006879], [35.625842, 129.006821], [35.625711, 129.00682], [35.625558, 129.006822], [35.625423, 129.006807], [35.625279, 129.006793], [35.625117, 129.006769], [35.625059, 129.006757], [35.625034, 129.006748], [35.625003, 129.006733], [35.624972, 129.006702], [35.624941, 129.006649], [35.624909, 129.006574], [35.624868, 129.006462], [35.624852, 129.006446], [35.624812, 129.00642], [35.624763, 129.006413], [35.624593, 129.006309], [35.624445, 129.00614], [35.624401, 129.006098], [35.624329, 129.006068], [35.624231, 129.006019], [35.624132, 129.005978], [35.624018, 129.005928], [35.623918, 129.005873], [35.623831, 129.005821], [35.623784, 129.005765], [35.623743, 129.0057], [35.62369, 129.005597], [35.623627, 129.005455], [35.623584, 129.005346], [35.623547, 129.005265], [35.62351, 129.005192], [35.623459, 129.00513], [35.623419, 129.005107], [35.623374, 129.005087], [35.623316, 129.005083], [35.623203, 129.00508], [35.623093, 129.005066], [35.622969, 129.00506], [35.622851, 129.005013], [35.622739, 129.004955], [35.622672, 129.004934], [35.622553, 129.00489], [35.622502, 129.004864], [35.622442, 129.004826], [35.622379, 129.004783], [35.622331, 129.004724], [35.622278, 129.004648], [35.622223, 129.004589], [35.622163, 129.004538], [35.622105, 129.004492], [35.622053, 129.004464], [35.621989, 129.004426], [35.621911, 129.004385], [35.621839, 129.004367], [35.621771, 129.004349], [35.621664, 129.004299], [35.621557, 129.004264], [35.621475, 129.00427], [35.62143, 129.004282], [35.621285, 129.004226], [35.621189, 129.004152], [35.621134, 129.004085], [35.621057, 129.003975], [35.620969, 129.003854], [35.620804, 129.003726], [35.620746, 129.003714], [35.620491, 129.003613], [35.620061, 129.003451], [35.620136, 129.003389], [35.620182, 129.003316], [35.620209, 129.003215], [35.620244, 129.003105], [35.620278, 129.003012], [35.620281, 129.002935], [35.620256, 129.003067], [35.620202, 129.003236], [35.620152, 129.003357], [35.620065, 129.003459], [35.619962, 129.00354], [35.619845, 129.003672], [35.619763, 129.003755], [35.619717, 129.003779], [35.619666, 129.00378], [35.619604, 129.003804], [35.619572, 129.003858], [35.61951, 129.004047], [35.619442, 129.004222], [35.619325, 129.004357], [35.619267, 129.004463], [35.619218, 129.00455], [35.619172, 129.004601], [35.619096, 129.004679], [35.618996, 129.004779], [35.618929, 129.00483], [35.618774, 129.004972], [35.618681, 129.004986], [35.618631, 129.005029], [35.618552, 129.00516], [35.618457, 129.005337], [35.618389, 129.005476], [35.61834, 129.005577], [35.618243, 129.005734], [35.618167, 129.005856], [35.618095, 129.005957], [35.618008, 129.006037], [35.617941, 129.006121], [35.617882, 129.006202], [35.617811, 129.00627], [35.617724, 129.006317], [35.617608, 129.00638], [35.617485, 129.006457], [35.617369, 129.006551], [35.617266, 129.006645], [35.617213, 129.006696], [35.617172, 129.006758], [35.617104, 129.00679], [35.617027, 129.006818], [35.616972, 129.006817], [35.616816, 129.006879], [35.61668, 129.006945], [35.6166, 129.006998], [35.616455, 129.007069], [35.616344, 129.007096], [35.616262, 129.007158], [35.616136, 129.007251], [35.616038, 129.007334], [35.615907, 129.007491], [35.615904, 129.007557], [35.615904, 129.007668], [35.615874, 129.007711], [35.615828, 129.007762], [35.615777, 129.007869], [35.615747, 129.007879], [35.61561, 129.007845], [35.615576, 129.007877], [35.615575, 129.007957], [35.615574, 129.008015], [35.615626, 129.008254], [35.615638, 129.008331], [35.615666, 129.008448], [35.615707, 129.008512], [35.615727, 129.008579], [35.615764, 129.008781], [35.61577, 129.008953], [35.615767, 129.009132], [35.615771, 129.009303], [35.615783, 129.00951], [35.615796, 129.009682], [35.615795, 129.009855], [35.615795, 129.010021], [35.615787, 129.010211], [35.615792, 129.01044], [35.615789, 129.010661], [35.615785, 129.01089], [35.615766, 129.011063], [35.615755, 129.01117], [35.615695, 129.011445], [35.61564, 129.011598], [35.615601, 129.011768], [35.615592, 129.011812], [35.615542, 129.01194], [35.61551, 129.012108], [35.615491, 129.01219], [35.615488, 129.012452], [35.615541, 129.012561], [35.615589, 129.012755], [35.615636, 129.012944], [35.615678, 129.013111], [35.615754, 129.013303], [35.61584, 129.013512], [35.615905, 129.013674], [35.615978, 129.013866], [35.616097, 129.01407], [35.616168, 129.014249], [35.616234, 129.014471], [35.616319, 129.014658], [35.616371, 129.014797], [35.616408, 129.014988], [35.616443, 129.015177], [35.61646, 129.015357], [35.616459, 129.015423], [35.616456, 129.015495], [35.616436, 129.015607], [35.616419, 129.015706], [35.616362, 129.01584], [35.616313, 129.015971], [35.616275, 129.016089], [35.616239, 129.016187], [35.616201, 129.016313], [35.616158, 129.016472], [35.616131, 129.016579], [35.61607, 129.016859], [35.616042, 129.017043], [35.616012, 129.017219], [35.615981, 129.017342], [35.615973, 129.0174], [35.615964, 129.017557], [35.615957, 129.017692], [35.615929, 129.017884], [35.615899, 129.018082], [35.615886, 129.018198], [35.615842, 129.018368], [35.615804, 129.018477], [35.615748, 129.018622], [35.615731, 129.018682], [35.615707, 129.018797], [35.615682, 129.018949], [35.61565, 129.019094], [35.615613, 129.019267], [35.615584, 129.019379], [35.615535, 129.019521], [35.615443, 129.019729], [35.615398, 129.019855], [35.615332, 129.020068], [35.615278, 129.020199], [35.615196, 129.020374], [35.615119, 129.020546], [35.615054, 129.020751], [35.615008, 129.020846], [35.614935, 129.021013], [35.614879, 129.021152], [35.614719, 129.021294], [35.614582, 129.021398], [35.61448, 129.021443], [35.61435, 129.021522], [35.614265, 129.021586], [35.614135, 129.021707], [35.614094, 129.021723], [35.613984, 129.021739], [35.6138, 129.021792], [35.613783, 129.02201], [35.613763, 129.022255], [35.613737, 129.022461], [35.613704, 129.0227], [35.613668, 129.022934], [35.613633, 129.023148], [35.613614, 129.02338], [35.613583, 129.023572], [35.613562, 129.023745], [35.613532, 129.023932], [35.61352, 129.024106], [35.613497, 129.02427], [35.613469, 129.024463], [35.613453, 129.024633], [35.613423, 129.024818], [35.613386, 129.02501], [35.613342, 129.025213], [35.613312, 129.025386], [35.613278, 129.025548], [35.613269, 129.025768], [35.613264, 129.02595], [35.613256, 129.026149], [35.613291, 129.026359], [35.613329, 129.026523], [35.613357, 129.026708], [35.613478, 129.02688], [35.613566, 129.027006], [35.613638, 129.027132], [35.613756, 129.027259], [35.613946, 129.027471], [35.614022, 129.027633], [35.614092, 129.027775], [35.61417, 129.027932], [35.614253, 129.028201], [35.61433, 129.028446], [35.614403, 129.02866], [35.614472, 129.028853], [35.614554, 129.029075], [35.614852, 129.029317], [35.614929, 129.029573], [35.615022, 129.02989], [35.615077, 129.030148], [35.615135, 129.030406], [35.615185, 129.03065], [35.615219, 129.030803], [35.615223, 129.030943], [35.615225, 129.031214], [35.615216, 129.031354], [35.61519, 129.031552], [35.615156, 129.03186], [35.615143, 129.032067], [35.615128, 129.032309], [35.615113, 129.032535], [35.615105, 129.032731], [35.6151, 129.032916], [35.615088, 129.033081], [35.615073, 129.033439], [35.615163, 129.03383], [35.615242, 129.03423], [35.615329, 129.034662], [35.615321, 129.034905], [35.615316, 129.035159], [35.615304, 129.035481], [35.615232, 129.03589], [35.615177, 129.036217], [35.615115, 129.036541], [35.615049, 129.03687], [35.614978, 129.037211], [35.61491, 129.037496], [35.614917, 129.037725], [35.614915, 129.03799], [35.615036, 129.03831], [35.615103, 129.038695], [35.615142, 129.038939], [35.615174, 129.039186], [35.615198, 129.039368], [35.615377, 129.03945], [35.615475, 129.039395], [35.615572, 129.039342], [35.615714, 129.039232], [35.615838, 129.039078], [35.616005, 129.038923], [35.616217, 129.038895], [35.616488, 129.039023]],
+  // 2: 운문령코스 (운문령→귀바위→상운산→쌀바위→가지산정상 왕복)
+  2:[[35.636027, 129.040049], [35.635991, 129.039897], [35.635953, 129.039755], [35.635899, 129.039607], [35.63586, 129.039499], [35.635778, 129.039325], [35.635682, 129.039127], [35.635587, 129.038984], [35.635502, 129.03886], [35.635429, 129.038759], [35.635311, 129.03856], [35.635252, 129.038412], [35.63519, 129.038254], [35.635109, 129.038127], [35.635009, 129.038006], [35.634912, 129.037885], [35.6348, 129.037744], [35.634654, 129.037575], [35.6345, 129.03748], [35.634362, 129.037396], [35.63423, 129.037313], [35.634057, 129.037193], [35.633923, 129.037112], [35.633765, 129.037003], [35.633662, 129.036937], [35.633535, 129.036848], [35.633431, 129.036782], [35.633321, 129.036724], [35.633236, 129.036686], [35.633142, 129.036643], [35.633071, 129.036588], [35.63303, 129.036515], [35.633015, 129.036419], [35.633025, 129.036275], [35.633024, 129.036173], [35.633016, 129.036143], [35.632989, 129.036123], [35.632939, 129.036119], [35.632912, 129.036137], [35.632865, 129.036238], [35.632821, 129.036458], [35.632824, 129.036565], [35.632838, 129.036773], [35.63286, 129.036922], [35.632861, 129.037013], [35.632842, 129.03706], [35.632815, 129.037062], [35.632766, 129.03705], [35.632713, 129.036996], [35.632668, 129.036862], [35.632624, 129.036762], [35.632573, 129.036623], [35.632508, 129.036475], [35.632447, 129.036335], [35.632384, 129.036198], [35.632345, 129.036106], [35.632319, 129.036039], [35.632306, 129.035998], [35.632312, 129.035934], [35.632322, 129.035835], [35.63236, 129.035767], [35.632406, 129.035672], [35.632453, 129.035598], [35.632474, 129.035536], [35.632478, 129.035428], [35.632451, 129.035317], [35.632426, 129.035184], [35.632394, 129.035042], [35.632365, 129.034904], [35.632358, 129.034807], [35.632363, 129.034658], [35.632378, 129.034543], [35.632438, 129.034439], [35.632487, 129.034347], [35.632504, 129.034267], [35.63258, 129.03417], [35.632624, 129.034113], [35.632663, 129.034048], [35.632722, 129.033933], [35.632823, 129.033817], [35.632912, 129.033736], [35.632965, 129.033666], [35.633047, 129.033621], [35.633132, 129.033508], [35.633233, 129.033422], [35.633304, 129.033313], [35.633376, 129.033183], [35.633446, 129.03306], [35.63354, 129.032864], [35.633582, 129.032721], [35.633642, 129.032549], [35.633735, 129.03238], [35.633759, 129.032262], [35.633787, 129.0322], [35.633833, 129.03214], [35.633866, 129.032075], [35.633885, 129.032009], [35.633927, 129.031822], [35.633938, 129.031671], [35.63394, 129.031552], [35.633957, 129.031473], [35.633978, 129.031308], [35.633997, 129.031123], [35.634017, 129.030972], [35.634055, 129.030747], [35.634082, 129.030604], [35.634119, 129.030442], [35.634203, 129.030243], [35.634265, 129.030079], [35.634332, 129.029926], [35.634396, 129.029784], [35.634444, 129.029597], [35.634501, 129.029442], [35.634562, 129.0293], [35.63461, 129.029218], [35.634679, 129.029134], [35.634748, 129.029075], [35.634853, 129.028995], [35.634971, 129.028904], [35.635097, 129.028805], [35.635239, 129.028693], [35.635323, 129.028626], [35.635459, 129.028475], [35.635596, 129.028316], [35.635759, 129.028165], [35.635804, 129.028015], [35.635847, 129.027867], [35.636009, 129.027636], [35.636156, 129.027488], [35.636271, 129.027207], [35.636346, 129.026999], [35.636412, 129.026835], [35.636506, 129.026609], [35.636528, 129.02638], [35.63654, 129.026173], [35.636557, 129.025961], [35.636574, 129.025799], [35.636537, 129.025597], [35.636488, 129.025397], [35.636438, 129.025183], [35.636385, 129.024939], [35.636308, 129.024716], [35.63622, 129.024482], [35.636153, 129.02429], [35.636082, 129.024092], [35.636007, 129.023889], [35.63594, 129.023702], [35.635882, 129.023549], [35.635841, 129.023432], [35.635794, 129.023254], [35.635752, 129.023074], [35.635699, 129.022871], [35.635655, 129.022696], [35.635611, 129.022518], [35.635543, 129.022359], [35.635474, 129.0222], [35.635381, 129.021961], [35.63539, 129.021693], [35.635393, 129.021522], [35.635412, 129.02131], [35.63541, 129.021158], [35.635428, 129.02104], [35.635354, 129.020922], [35.635301, 129.020805], [35.635225, 129.020676], [35.635131, 129.020503], [35.635028, 129.020304], [35.634974, 129.020201], [35.634881, 129.020066], [35.634763, 129.019873], [35.634671, 129.019727], [35.634572, 129.019567], [35.63446, 129.019396], [35.634346, 129.019217], [35.63421, 129.01915], [35.634071, 129.019088], [35.633923, 129.019024], [35.633778, 129.018959], [35.633628, 129.018903], [35.633501, 129.018842], [35.633369, 129.018786], [35.633254, 129.018742], [35.633127, 129.018686], [35.633044, 129.018654], [35.632947, 129.018646], [35.632876, 129.01863], [35.632801, 129.018626], [35.632662, 129.018589], [35.632555, 129.018553], [35.63251, 129.01853], [35.632468, 129.01849], [35.63243, 129.018454], [35.632384, 129.018395], [35.632325, 129.018255], [35.632251, 129.018107], [35.632171, 129.017923], [35.632093, 129.017747], [35.63202, 129.017552], [35.631959, 129.017385], [35.631904, 129.017201], [35.631873, 129.01703], [35.631851, 129.016866], [35.631833, 129.016703], [35.631814, 129.016529], [35.631793, 129.016423], [35.631763, 129.016309], [35.631725, 129.016198], [35.631672, 129.0161], [35.631647, 129.016003], [35.631617, 129.015889], [35.631596, 129.015795], [35.631585, 129.015678], [35.631587, 129.01553], [35.631593, 129.015458], [35.631572, 129.015369], [35.631532, 129.015316], [35.631439, 129.015247], [35.631291, 129.015196], [35.631177, 129.015158], [35.631038, 129.015099], [35.630877, 129.015021], [35.630772, 129.014979], [35.630705, 129.014947], [35.630599, 129.014939], [35.63052, 129.014948], [35.630443, 129.014946], [35.630349, 129.014919], [35.630253, 129.01487], [35.630193, 129.014846], [35.63012, 129.014784], [35.630046, 129.014715], [35.630009, 129.014687], [35.629951, 129.0146], [35.629888, 129.014507], [35.629826, 129.014401], [35.62978, 129.014328], [35.629737, 129.014208], [35.6297, 129.014119], [35.629664, 129.014019], [35.62964, 129.013982], [35.629582, 129.013939], [35.629491, 129.013865], [35.629422, 129.013803], [35.629355, 129.013752], [35.629311, 129.013704], [35.629287, 129.01367], [35.629262, 129.013639], [35.629212, 129.013549], [35.629179, 129.013499], [35.629138, 129.013418], [35.629119, 129.013337], [35.629109, 129.01313], [35.629098, 129.012953], [35.629078, 129.012831], [35.629072, 129.012652], [35.629065, 129.012489], [35.629079, 129.012343], [35.629097, 129.0122], [35.629104, 129.012093], [35.629115, 129.011944], [35.629081, 129.011816], [35.62905, 129.011652], [35.629012, 129.0115], [35.629087, 129.011342], [35.629188, 129.011187], [35.629295, 129.011173], [35.629355, 129.011059], [35.629351, 129.01092], [35.629322, 129.010754], [35.62931, 129.010517], [35.629345, 129.010333], [35.629352, 129.010145], [35.629342, 129.009971], [35.629329, 129.009783], [35.629314, 129.00962], [35.629287, 129.009492], [35.629252, 129.009395], [35.629228, 129.00935], [35.629193, 129.009291], [35.629142, 129.009229], [35.629089, 129.009165], [35.629036, 129.009125], [35.628985, 129.009098], [35.628935, 129.009094], [35.628875, 129.009071], [35.628785, 129.009041], [35.628666, 129.008994], [35.628563, 129.008955], [35.628469, 129.008931], [35.628395, 129.008921], [35.628317, 129.0089], [35.62823, 129.008842], [35.628147, 129.008779], [35.628081, 129.008706], [35.628037, 129.008664], [35.62798, 129.008574], [35.627922, 129.008506], [35.627838, 129.008441], [35.62776, 129.008375], [35.6277, 129.008341], [35.627627, 129.008253], [35.627529, 129.008154], [35.627441, 129.008069], [35.627374, 129.007999], [35.62731, 129.0079], [35.62726, 129.007827], [35.627205, 129.007752], [35.627141, 129.007678], [35.627077, 129.007605], [35.627012, 129.007534], [35.626944, 129.007469], [35.626875, 129.007393], [35.626829, 129.007342], [35.626792, 129.007256], [35.626714, 129.00719], [35.626645, 129.007147], [35.626576, 129.007112], [35.626486, 129.007099], [35.626364, 129.007096], [35.626253, 129.007024], [35.626134, 129.00696], [35.626014, 129.006897], [35.625915, 129.006853], [35.625842, 129.006823], [35.625736, 129.006829], [35.625634, 129.006816], [35.625533, 129.006818], [35.625418, 129.006816], [35.625283, 129.006793], [35.62516, 129.006776], [35.625083, 129.006769], [35.624992, 129.006725], [35.624967, 129.006699], [35.624933, 129.006616], [35.6249, 129.006541], [35.624859, 129.006448], [35.624805, 129.00642], [35.624756, 129.006405], [35.62468, 129.006364], [35.624591, 129.006307], [35.624536, 129.006231], [35.624474, 129.006163], [35.624418, 129.006126], [35.624349, 129.006074], [35.624262, 129.006039], [35.624152, 129.005984], [35.624056, 129.00594], [35.623965, 129.005896], [35.623904, 129.005867], [35.623842, 129.005827], [35.623809, 129.005799], [35.623758, 129.005737], [35.623725, 129.005659], [35.623673, 129.005561], [35.623625, 129.005446], [35.623576, 129.005321], [35.623541, 129.005254], [35.623497, 129.005178], [35.623459, 129.00513], [35.623415, 129.005099], [35.623372, 129.005084], [35.623302, 129.005082], [35.623221, 129.005083], [35.623122, 129.005075], [35.623044, 129.005065], [35.622974, 129.005052], [35.62288, 129.005019], [35.622775, 129.004975], [35.622679, 129.004926], [35.622567, 129.004896], [35.622479, 129.004855], [35.622406, 129.004801], [35.622346, 129.004736], [35.622284, 129.004665], [35.622223, 129.004584], [35.622152, 129.004518], [35.622076, 129.004464], [35.622002, 129.004432], [35.621906, 129.004388], [35.621792, 129.004352], [35.62168, 129.004302], [35.621597, 129.004273], [35.621552, 129.004263], [35.621491, 129.004256], [35.621428, 129.004271], [35.621285, 129.004229], [35.621194, 129.004144], [35.621143, 129.004101], [35.621085, 129.004017], [35.621041, 129.003947], [35.620966, 129.003851], [35.620813, 129.003729], [35.62075, 129.0037], [35.620598, 129.003646], [35.620511, 129.003617], [35.62041, 129.003581], [35.620296, 129.003545], [35.62017, 129.003492], [35.620063, 129.003465], [35.620155, 129.003351], [35.620216, 129.003204], [35.620275, 129.003012], [35.620265, 129.002926], [35.620275, 129.003012], [35.620216, 129.003204], [35.620155, 129.003351], [35.620063, 129.003465], [35.62017, 129.003492], [35.620296, 129.003545], [35.62041, 129.003581], [35.620511, 129.003617], [35.620598, 129.003646], [35.62075, 129.0037], [35.620813, 129.003729], [35.620966, 129.003851], [35.621041, 129.003947], [35.621085, 129.004017], [35.621143, 129.004101], [35.621194, 129.004144], [35.621285, 129.004229], [35.621428, 129.004271], [35.621491, 129.004256], [35.621552, 129.004263], [35.621597, 129.004273], [35.62168, 129.004302], [35.621792, 129.004352], [35.621906, 129.004388], [35.622002, 129.004432], [35.622076, 129.004464], [35.622152, 129.004518], [35.622223, 129.004584], [35.622284, 129.004665], [35.622346, 129.004736], [35.622406, 129.004801], [35.622479, 129.004855], [35.622567, 129.004896], [35.622679, 129.004926], [35.622775, 129.004975], [35.62288, 129.005019], [35.622974, 129.005052], [35.623044, 129.005065], [35.623122, 129.005075], [35.623221, 129.005083], [35.623302, 129.005082], [35.623372, 129.005084], [35.623415, 129.005099], [35.623459, 129.00513], [35.623497, 129.005178], [35.623541, 129.005254], [35.623576, 129.005321], [35.623625, 129.005446], [35.623673, 129.005561], [35.623725, 129.005659], [35.623758, 129.005737], [35.623809, 129.005799], [35.623842, 129.005827], [35.623904, 129.005867], [35.623965, 129.005896], [35.624056, 129.00594], [35.624152, 129.005984], [35.624262, 129.006039], [35.624349, 129.006074], [35.624418, 129.006126], [35.624474, 129.006163], [35.624536, 129.006231], [35.624591, 129.006307], [35.62468, 129.006364], [35.624756, 129.006405], [35.624805, 129.00642], [35.624859, 129.006448], [35.6249, 129.006541], [35.624933, 129.006616], [35.624967, 129.006699], [35.624992, 129.006725], [35.625083, 129.006769], [35.62516, 129.006776], [35.625283, 129.006793], [35.625418, 129.006816], [35.625533, 129.006818], [35.625634, 129.006816], [35.625736, 129.006829], [35.625842, 129.006823], [35.625915, 129.006853], [35.626014, 129.006897], [35.626134, 129.00696], [35.626253, 129.007024], [35.626364, 129.007096], [35.626486, 129.007099], [35.626576, 129.007112], [35.626645, 129.007147], [35.626714, 129.00719], [35.626792, 129.007256], [35.626829, 129.007342], [35.626875, 129.007393], [35.626944, 129.007469], [35.627012, 129.007534], [35.627077, 129.007605], [35.627141, 129.007678], [35.627205, 129.007752], [35.62726, 129.007827], [35.62731, 129.0079], [35.627374, 129.007999], [35.627441, 129.008069], [35.627529, 129.008154], [35.627627, 129.008253], [35.6277, 129.008341], [35.62776, 129.008375], [35.627838, 129.008441], [35.627922, 129.008506], [35.62798, 129.008574], [35.628037, 129.008664], [35.628081, 129.008706], [35.628147, 129.008779], [35.62823, 129.008842], [35.628317, 129.0089], [35.628395, 129.008921], [35.628469, 129.008931], [35.628563, 129.008955], [35.628666, 129.008994], [35.628785, 129.009041], [35.628875, 129.009071], [35.628935, 129.009094], [35.628985, 129.009098], [35.629036, 129.009125], [35.629089, 129.009165], [35.629142, 129.009229], [35.629193, 129.009291], [35.629228, 129.00935], [35.629252, 129.009395], [35.629287, 129.009492], [35.629314, 129.00962], [35.629329, 129.009783], [35.629342, 129.009971], [35.629352, 129.010145], [35.629345, 129.010333], [35.62931, 129.010517], [35.629322, 129.010754], [35.629351, 129.01092], [35.629355, 129.011059], [35.629295, 129.011173], [35.629188, 129.011187], [35.629087, 129.011342], [35.629012, 129.0115], [35.62905, 129.011652], [35.629081, 129.011816], [35.629115, 129.011944], [35.629104, 129.012093], [35.629097, 129.0122], [35.629079, 129.012343], [35.629065, 129.012489], [35.629072, 129.012652], [35.629078, 129.012831], [35.629098, 129.012953], [35.629109, 129.01313], [35.629119, 129.013337], [35.629138, 129.013418], [35.629179, 129.013499], [35.629212, 129.013549], [35.629262, 129.013639], [35.629287, 129.01367], [35.629311, 129.013704], [35.629355, 129.013752], [35.629422, 129.013803], [35.629491, 129.013865], [35.629582, 129.013939], [35.62964, 129.013982], [35.629664, 129.014019], [35.6297, 129.014119], [35.629737, 129.014208], [35.62978, 129.014328], [35.629826, 129.014401], [35.629888, 129.014507], [35.629951, 129.0146], [35.630009, 129.014687], [35.630046, 129.014715], [35.63012, 129.014784], [35.630193, 129.014846], [35.630253, 129.01487], [35.630349, 129.014919], [35.630443, 129.014946], [35.63052, 129.014948], [35.630599, 129.014939], [35.630705, 129.014947], [35.630772, 129.014979], [35.630877, 129.015021], [35.631038, 129.015099], [35.631177, 129.015158], [35.631291, 129.015196], [35.631439, 129.015247], [35.631532, 129.015316], [35.631572, 129.015369], [35.631593, 129.015458], [35.631587, 129.01553], [35.631585, 129.015678], [35.631596, 129.015795], [35.631617, 129.015889], [35.631647, 129.016003], [35.631672, 129.0161], [35.631725, 129.016198], [35.631763, 129.016309], [35.631793, 129.016423], [35.631814, 129.016529], [35.631833, 129.016703], [35.631851, 129.016866], [35.631873, 129.01703], [35.631904, 129.017201], [35.631959, 129.017385], [35.63202, 129.017552], [35.632093, 129.017747], [35.632171, 129.017923], [35.632251, 129.018107], [35.632325, 129.018255], [35.632384, 129.018395], [35.63243, 129.018454], [35.632468, 129.01849], [35.63251, 129.01853], [35.632555, 129.018553], [35.632662, 129.018589], [35.632801, 129.018626], [35.632876, 129.01863], [35.632947, 129.018646], [35.633044, 129.018654], [35.633127, 129.018686], [35.633254, 129.018742], [35.633369, 129.018786], [35.633501, 129.018842], [35.633628, 129.018903], [35.633778, 129.018959], [35.633923, 129.019024], [35.634071, 129.019088], [35.63421, 129.01915], [35.634346, 129.019217], [35.63446, 129.019396], [35.634572, 129.019567], [35.634671, 129.019727], [35.634763, 129.019873], [35.634881, 129.020066], [35.634974, 129.020201], [35.635028, 129.020304], [35.635131, 129.020503], [35.635225, 129.020676], [35.635301, 129.020805], [35.635354, 129.020922], [35.635428, 129.02104], [35.63541, 129.021158], [35.635412, 129.02131], [35.635393, 129.021522], [35.63539, 129.021693], [35.635381, 129.021961], [35.635474, 129.0222], [35.635543, 129.022359], [35.635611, 129.022518], [35.635655, 129.022696], [35.635699, 129.022871], [35.635752, 129.023074], [35.635794, 129.023254], [35.635841, 129.023432], [35.635882, 129.023549], [35.63594, 129.023702], [35.636007, 129.023889], [35.636082, 129.024092], [35.636153, 129.02429], [35.63622, 129.024482], [35.636308, 129.024716], [35.636385, 129.024939], [35.636438, 129.025183], [35.636488, 129.025397], [35.636537, 129.025597], [35.636574, 129.025799], [35.636557, 129.025961], [35.63654, 129.026173], [35.636528, 129.02638], [35.636506, 129.026609], [35.636412, 129.026835], [35.636346, 129.026999], [35.636271, 129.027207], [35.636156, 129.027488], [35.636009, 129.027636], [35.635847, 129.027867], [35.635804, 129.028015], [35.635759, 129.028165], [35.635596, 129.028316], [35.635459, 129.028475], [35.635323, 129.028626], [35.635239, 129.028693], [35.635097, 129.028805], [35.634971, 129.028904], [35.634853, 129.028995], [35.634748, 129.029075], [35.634679, 129.029134], [35.63461, 129.029218], [35.634562, 129.0293], [35.634501, 129.029442], [35.634444, 129.029597], [35.634396, 129.029784], [35.634332, 129.029926], [35.634265, 129.030079], [35.634203, 129.030243], [35.634119, 129.030442], [35.634082, 129.030604], [35.634055, 129.030747], [35.634017, 129.030972], [35.633997, 129.031123], [35.633978, 129.031308], [35.633957, 129.031473], [35.63394, 129.031552], [35.633938, 129.031671], [35.633927, 129.031822], [35.633885, 129.032009], [35.633866, 129.032075], [35.633833, 129.03214], [35.633787, 129.0322], [35.633759, 129.032262], [35.633735, 129.03238], [35.633642, 129.032549], [35.633582, 129.032721], [35.63354, 129.032864], [35.633446, 129.03306], [35.633376, 129.033183], [35.633304, 129.033313], [35.633233, 129.033422], [35.633132, 129.033508], [35.633047, 129.033621], [35.632965, 129.033666], [35.632912, 129.033736], [35.632823, 129.033817], [35.632722, 129.033933], [35.632663, 129.034048], [35.632624, 129.034113], [35.63258, 129.03417], [35.632504, 129.034267], [35.632487, 129.034347], [35.632438, 129.034439], [35.632378, 129.034543], [35.632363, 129.034658], [35.632358, 129.034807], [35.632365, 129.034904], [35.632394, 129.035042], [35.632426, 129.035184], [35.632451, 129.035317], [35.632478, 129.035428], [35.632474, 129.035536], [35.632453, 129.035598], [35.632406, 129.035672], [35.63236, 129.035767], [35.632322, 129.035835], [35.632312, 129.035934], [35.632306, 129.035998], [35.632319, 129.036039], [35.632345, 129.036106], [35.632384, 129.036198], [35.632447, 129.036335], [35.632508, 129.036475], [35.632573, 129.036623], [35.632624, 129.036762], [35.632668, 129.036862], [35.632713, 129.036996], [35.632766, 129.03705], [35.632815, 129.037062], [35.632842, 129.03706], [35.632861, 129.037013], [35.63286, 129.036922], [35.632838, 129.036773], [35.632824, 129.036565], [35.632821, 129.036458], [35.632865, 129.036238], [35.632912, 129.036137], [35.632939, 129.036119], [35.632989, 129.036123], [35.633016, 129.036143], [35.633024, 129.036173], [35.633025, 129.036275], [35.633015, 129.036419], [35.63303, 129.036515], [35.633071, 129.036588], [35.633142, 129.036643], [35.633236, 129.036686], [35.633321, 129.036724], [35.633431, 129.036782], [35.633535, 129.036848], [35.633662, 129.036937], [35.633765, 129.037003], [35.633923, 129.037112], [35.634057, 129.037193], [35.63423, 129.037313], [35.634362, 129.037396], [35.6345, 129.03748], [35.634654, 129.037575], [35.6348, 129.037744], [35.634912, 129.037885], [35.635009, 129.038006], [35.635109, 129.038127], [35.63519, 129.038254], [35.635252, 129.038412], [35.635311, 129.03856], [35.635429, 129.038759], [35.635502, 129.03886], [35.635587, 129.038984], [35.635682, 129.039127], [35.635778, 129.039325], [35.63586, 129.039499], [35.635899, 129.039607], [35.635953, 129.039755], [35.635991, 129.039897], [35.636027, 129.040049]],
+  // 3: 운문산연계코스 (석남터널→가지산→아랫재→운문산→상양마을)
+  3:[[35.608431, 129.025613], [35.60852, 129.025643], [35.608592, 129.025692], [35.608717, 129.025722], [35.608718, 129.025662], [35.608755, 129.025605], [35.608815, 129.02554], [35.608823, 129.02548], [35.6089, 129.025443], [35.608957, 129.025392], [35.60904, 129.025413], [35.609133, 129.025402], [35.609154, 129.025344], [35.609134, 129.025289], [35.609144, 129.025237], [35.609164, 129.025171], [35.609197, 129.025061], [35.609228, 129.024974], [35.609261, 129.024875], [35.609278, 129.02481], [35.609251, 129.024776], [35.609246, 129.024707], [35.609224, 129.024651], [35.609216, 129.024604], [35.609235, 129.024541], [35.609191, 129.024498], [35.609203, 129.024435], [35.609209, 129.024355], [35.609194, 129.024308], [35.609181, 129.024247], [35.609223, 129.024174], [35.609242, 129.024122], [35.609225, 129.024086], [35.6093, 129.024046], [35.609277, 129.023924], [35.609305, 129.023872], [35.60927, 129.023805], [35.609312, 129.023707], [35.609284, 129.023646], [35.609257, 129.023612], [35.609256, 129.023565], [35.609212, 129.023506], [35.609183, 129.02345], [35.609168, 129.023405], [35.609144, 129.023358], [35.609125, 129.023305], [35.609129, 129.023222], [35.609112, 129.023161], [35.609099, 129.023084], [35.609098, 129.023037], [35.609093, 129.022943], [35.609072, 129.02284], [35.60906, 129.022766], [35.609037, 129.022668], [35.609011, 129.022599], [35.608979, 129.022499], [35.608958, 129.022402], [35.608935, 129.022288], [35.609199, 129.022239], [35.609498, 129.022181], [35.609751, 129.022143], [35.609954, 129.022098], [35.610166, 129.022109], [35.610418, 129.022127], [35.610697, 129.022117], [35.610951, 129.022019], [35.6111, 129.022028], [35.611213, 129.0221], [35.611308, 129.022108], [35.611519, 129.022113], [35.611703, 129.022159], [35.611778, 129.022161], [35.611955, 129.022074], [35.61206, 129.021969], [35.61214, 129.021927], [35.61235, 129.021913], [35.612503, 129.021903], [35.61269, 129.021897], [35.612859, 129.02189], [35.613006, 129.021866], [35.613155, 129.021823], [35.613289, 129.021791], [35.613451, 129.021775], [35.613611, 129.021807], [35.613719, 129.021807], [35.613805, 129.02179], [35.613959, 129.021741], [35.614099, 129.021717], [35.614183, 129.021664], [35.614259, 129.021586], [35.614391, 129.021496], [35.614487, 129.021429], [35.61458, 129.021395], [35.614714, 129.021294], [35.614881, 129.021144], [35.614963, 129.020944], [35.615055, 129.020745], [35.615123, 129.020537], [35.615208, 129.020352], [35.61532, 129.020104], [35.615398, 129.019849], [35.615469, 129.019663], [35.615577, 129.019404], [35.61564, 129.019127], [35.615679, 129.018946], [35.615712, 129.018751], [35.615769, 129.018562], [35.615824, 129.0184], [35.615866, 129.018274], [35.615884, 129.018173], [35.615929, 129.017917], [35.615957, 129.017697], [35.615971, 129.017383], [35.616025, 129.017164], [35.616047, 129.017046], [35.616058, 129.016897], [35.616122, 129.01662], [35.616201, 129.016321], [35.61627, 129.0161], [35.616327, 129.015922], [35.616369, 129.015821], [35.616423, 129.01569], [35.616441, 129.015574], [35.616456, 129.015503], [35.616458, 129.015393], [35.616459, 129.015296], [35.616443, 129.015193], [35.616427, 129.015077], [35.6164, 129.01495], [35.616368, 129.014805], [35.616308, 129.014641], [35.616232, 129.01446], [35.616179, 129.014285], [35.616099, 129.014079], [35.615981, 129.013869], [35.615886, 129.01361], [35.615786, 129.013362], [35.615682, 129.013133], [35.615642, 129.012964], [35.615617, 129.012855], [35.615578, 129.012727], [35.615536, 129.012561], [35.615484, 129.012449], [35.615495, 129.012182], [35.61554, 129.011951], [35.615599, 129.011793], [35.615635, 129.011628], [35.615704, 129.011412], [35.61576, 129.011151], [35.615785, 129.010898], [35.615799, 129.010587], [35.615795, 129.010278], [35.615795, 129.010004], [35.615792, 129.009764], [35.61579, 129.009502], [35.615771, 129.009306], [35.615776, 129.009132], [35.615776, 129.008964], [35.615764, 129.008784], [35.615744, 129.008643], [35.615736, 129.008577], [35.615705, 129.008504], [35.615672, 129.008448], [35.615641, 129.008337], [35.615612, 129.008173], [35.615585, 129.008038], [35.615573, 129.007957], [35.615581, 129.007883], [35.615618, 129.007826], [35.615752, 129.007876], [35.615828, 129.007771], [35.615899, 129.007684], [35.615906, 129.007555], [35.615914, 129.007483], [35.61604, 129.007329], [35.616189, 129.007203], [35.616287, 129.007128], [35.616371, 129.007083], [35.616484, 129.007048], [35.616593, 129.007006], [35.616693, 129.006937], [35.616834, 129.006871], [35.616954, 129.006825], [35.617063, 129.006808], [35.61716, 129.006758], [35.617234, 129.006677], [35.617332, 129.006586], [35.617444, 129.006484], [35.617597, 129.006383], [35.617724, 129.006317], [35.617824, 129.006256], [35.617923, 129.006157], [35.617981, 129.006072], [35.618093, 129.005965], [35.618171, 129.005854], [35.618248, 129.005718], [35.618387, 129.005489], [35.618483, 129.005288], [35.618545, 129.005168], [35.618633, 129.005027], [35.618704, 129.004976], [35.618779, 129.004964], [35.618868, 129.004881], [35.619009, 129.004774], [35.61911, 129.004652], [35.61923, 129.004525], [35.619276, 129.004427], [35.61935, 129.004324], [35.619447, 129.004211], [35.619513, 129.004033], [35.619553, 129.003905], [35.619579, 129.003833], [35.619663, 129.003772], [35.619761, 129.003758], [35.619862, 129.003645], [35.619969, 129.003529], [35.620065, 129.003454], [35.620154, 129.003376], [35.620192, 129.00328], [35.62023, 129.00316], [35.620256, 129.003078], [35.62028, 129.003012], [35.62027, 129.002935], [35.62028, 129.003009], [35.620254, 129.003075], [35.62023, 129.003154], [35.620197, 129.003267], [35.620154, 129.00337], [35.620067, 129.003459], [35.620015, 129.003375], [35.619947, 129.003255], [35.619859, 129.003098], [35.61977, 129.00293], [35.619662, 129.002746], [35.61959, 129.002606], [35.619507, 129.002455], [35.619457, 129.002374], [35.619411, 129.00229], [35.619359, 129.002275], [35.619326, 129.00223], [35.619249, 129.002131], [35.61913, 129.001979], [35.618989, 129.001791], [35.618868, 129.001631], [35.6187, 129.001408], [35.618557, 129.001228], [35.61844, 129.001065], [35.618297, 129.000882], [35.618156, 129.000691], [35.618045, 129.000562], [35.617953, 129.000438], [35.617865, 129.000314], [35.617689, 129.000191], [35.617557, 129.000111], [35.617377, 128.999985], [35.617293, 128.999856], [35.617239, 128.999761], [35.617177, 128.999688], [35.617096, 128.99955], [35.61701, 128.999391], [35.616908, 128.999206], [35.616867, 128.999054], [35.616861, 128.999009], [35.616866, 128.998871], [35.616869, 128.998814], [35.616854, 128.998755], [35.616792, 128.998699], [35.61678, 128.998585], [35.616755, 128.998507], [35.616685, 128.99839], [35.616612, 128.998272], [35.616531, 128.998138], [35.616464, 128.998081], [35.616411, 128.998046], [35.616351, 128.997979], [35.616285, 128.9979], [35.616221, 128.99781], [35.616171, 128.997709], [35.61613, 128.99762], [35.616106, 128.997567], [35.6161, 128.99752], [35.616121, 128.997443], [35.616086, 128.997382], [35.616015, 128.997319], [35.615928, 128.997253], [35.61589, 128.997236], [35.615816, 128.99722], [35.615756, 128.997219], [35.615703, 128.997242], [35.615665, 128.997222], [35.615632, 128.997174], [35.615611, 128.997127], [35.615542, 128.997037], [35.615457, 128.996913], [35.615392, 128.996837], [35.615324, 128.996767], [35.615286, 128.996746], [35.615223, 128.996745], [35.615182, 128.996738], [35.615149, 128.996726], [35.61512, 128.996687], [35.61509, 128.996626], [35.615055, 128.996545], [35.615045, 128.996473], [35.615032, 128.996448], [35.614934, 128.996382], [35.614866, 128.996372], [35.614669, 128.996292], [35.614656, 128.996281], [35.614531, 128.996077], [35.614507, 128.996043], [35.614353, 128.995945], [35.614208, 128.99584], [35.614149, 128.995772], [35.614116, 128.995581], [35.614096, 128.995561], [35.613985, 128.995693], [35.613994, 128.995459], [35.614006, 128.995266], [35.613967, 128.99505], [35.613897, 128.994938], [35.613808, 128.99482], [35.613736, 128.994719], [35.613685, 128.994657], [35.61366, 128.994645], [35.613638, 128.994617], [35.613602, 128.99452], [35.613565, 128.994419], [35.613573, 128.994337], [35.613563, 128.994273], [35.613555, 128.994231], [35.613525, 128.99414], [35.613499, 128.994051], [35.613464, 128.993832], [35.613438, 128.993782], [35.61335, 128.993686], [35.613268, 128.993601], [35.613212, 128.993542], [35.613133, 128.993415], [35.613085, 128.99332], [35.613039, 128.993256], [35.61297, 128.993188], [35.612886, 128.993109], [35.612811, 128.993024], [35.612725, 128.992928], [35.612644, 128.992783], [35.612562, 128.992687], [35.61244, 128.99256], [35.61237, 128.992456], [35.612302, 128.992305], [35.612237, 128.992168], [35.612181, 128.992015], [35.612136, 128.991846], [35.612097, 128.991668], [35.612067, 128.991579], [35.61203, 128.991465], [35.611986, 128.991381], [35.611923, 128.99128], [35.611857, 128.991174], [35.611809, 128.991054], [35.61179, 128.991001], [35.611786, 128.990943], [35.611801, 128.990858], [35.611791, 128.990792], [35.611772, 128.990736], [35.611743, 128.99068], [35.611712, 128.990561], [35.61167, 128.990463], [35.611665, 128.990408], [35.611693, 128.990315], [35.611699, 128.990232], [35.611662, 128.990179], [35.611602, 128.990119], [35.611553, 128.990093], [35.611508, 128.990076], [35.611441, 128.990063], [35.611407, 128.990018], [35.61139, 128.98996], [35.61135, 128.989934], [35.61129, 128.989908], [35.61125, 128.989868], [35.611193, 128.989784], [35.61114, 128.989716], [35.611059, 128.989692], [35.610958, 128.989657], [35.61086, 128.989627], [35.610784, 128.989594], [35.61069, 128.989526], [35.610604, 128.989413], [35.61052, 128.989342], [35.610413, 128.989243], [35.610352, 128.989244], [35.610335, 128.989225], [35.610291, 128.989149], [35.610246, 128.988991], [35.610193, 128.988824], [35.610156, 128.988713], [35.610134, 128.98856], [35.610124, 128.988486], [35.610072, 128.988346], [35.609996, 128.988176], [35.609916, 128.987984], [35.60987, 128.987919], [35.609734, 128.98783], [35.609656, 128.987762], [35.609583, 128.987705], [35.609501, 128.987604], [35.609441, 128.987525], [35.609404, 128.987475], [35.609362, 128.987435], [35.60927, 128.987377], [35.609197, 128.987337], [35.609127, 128.987214], [35.609056, 128.987096], [35.608955, 128.98695], [35.608872, 128.986816], [35.60879, 128.986709], [35.608744, 128.986661], [35.608652, 128.986634], [35.60858, 128.986599], [35.608496, 128.986553], [35.608451, 128.986494], [35.608404, 128.986377], [35.608308, 128.9863], [35.608201, 128.986214], [35.608084, 128.986126], [35.608012, 128.986102], [35.607961, 128.986046], [35.607941, 128.985998], [35.60792, 128.985912], [35.607903, 128.985757], [35.607868, 128.985646], [35.607854, 128.985436], [35.607861, 128.985263], [35.607882, 128.985073], [35.607935, 128.984873], [35.607947, 128.984719], [35.607905, 128.984546], [35.607864, 128.98443], [35.607839, 128.984148], [35.607869, 128.983964], [35.607868, 128.983781], [35.607853, 128.983577], [35.60784, 128.9834], [35.60783, 128.983215], [35.607844, 128.983144], [35.607833, 128.98303], [35.607809, 128.982972], [35.607783, 128.982902], [35.607785, 128.982786], [35.607797, 128.982718], [35.607767, 128.982618], [35.60774, 128.982493], [35.607711, 128.982346], [35.607694, 128.982296], [35.607632, 128.982206], [35.607604, 128.982029], [35.607578, 128.981951], [35.607555, 128.981856], [35.607549, 128.981812], [35.607583, 128.981752], [35.607639, 128.981635], [35.607705, 128.98146], [35.607771, 128.98131], [35.607854, 128.98116], [35.607947, 128.981019], [35.608064, 128.980868], [35.60813, 128.980709], [35.608179, 128.980617], [35.608213, 128.980446], [35.608229, 128.980281], [35.608242, 128.980083], [35.608246, 128.979926], [35.608242, 128.979763], [35.608252, 128.979562], [35.608351, 128.979567], [35.608422, 128.979511], [35.608451, 128.979415], [35.608459, 128.979346], [35.608546, 128.979244], [35.608632, 128.979089], [35.60864, 128.978992], [35.608677, 128.978927], [35.608744, 128.978862], [35.608817, 128.978798], [35.608834, 128.978746], [35.608816, 128.978712], [35.608889, 128.978678], [35.608962, 128.978724], [35.609002, 128.978648], [35.608998, 128.978582], [35.609099, 128.978499], [35.609174, 128.97844], [35.609248, 128.978342], [35.609328, 128.978248], [35.609395, 128.978191], [35.609443, 128.978129], [35.609488, 128.978006], [35.609584, 128.978036], [35.609674, 128.97803], [35.60976, 128.978013], [35.609855, 128.977974], [35.609922, 128.97792], [35.610036, 128.977669], [35.610171, 128.9774], [35.610307, 128.977105], [35.610428, 128.97686], [35.610549, 128.976617], [35.610633, 128.976434], [35.610724, 128.976243], [35.610853, 128.97607], [35.610978, 128.975894], [35.611116, 128.975718], [35.611261, 128.975526], [35.611358, 128.975387], [35.611482, 128.975217], [35.611627, 128.97503], [35.611765, 128.974837], [35.611957, 128.97458], [35.612139, 128.974333], [35.612295, 128.974119], [35.612505, 128.973824], [35.612635, 128.973634], [35.612724, 128.973528], [35.612904, 128.973271], [35.613031, 128.973089], [35.613176, 128.972891], [35.61334, 128.972661], [35.61348, 128.972482], [35.613589, 128.97233], [35.613743, 128.972116], [35.613837, 128.971878], [35.613931, 128.971665], [35.61401, 128.971474], [35.614104, 128.971231], [35.614142, 128.970967], [35.614179, 128.970684], [35.614224, 128.970371], [35.61425, 128.970167], [35.61425, 128.969891], [35.61425, 128.969626], [35.614258, 128.969304], [35.614253, 128.969003], [35.614251, 128.968732], [35.614245, 128.968432], [35.614232, 128.968095], [35.614228, 128.96778], [35.614215, 128.967487], [35.614205, 128.967156], [35.614202, 128.966941], [35.614192, 128.966687], [35.614218, 128.966467], [35.614248, 128.966147], [35.61428, 128.965856], [35.61431, 128.965545], [35.614335, 128.965264], [35.614367, 128.964928], [35.61442, 128.964491], [35.614447, 128.964177], [35.614479, 128.963877], [35.614502, 128.963557], [35.614523, 128.963232], [35.614537, 128.962968], [35.614549, 128.962753], [35.614561, 128.962599], [35.614569, 128.962387], [35.614674, 128.962119], [35.614764, 128.96187], [35.614912, 128.961482], [35.615105, 128.96128], [35.615281, 128.961107], [35.61546, 128.960921], [35.615703, 128.960676], [35.615963, 128.960605], [35.616182, 128.960547], [35.61635, 128.960521], [35.616562, 128.960493], [35.616729, 128.960472], [35.616914, 128.960449], [35.616784, 128.960383], [35.616682, 128.960311], [35.616589, 128.960232], [35.616477, 128.960176], [35.616399, 128.960086], [35.616315, 128.960035], [35.616241, 128.959972], [35.616159, 128.959918], [35.61607, 128.959869], [35.61598, 128.959828], [35.615861, 128.959794], [35.615772, 128.959759], [35.615673, 128.959735], [35.615636, 128.959665], [35.61553, 128.959643], [35.615443, 128.959613], [35.615373, 128.959752], [35.615322, 128.959867], [35.615262, 128.95991], [35.615171, 128.959968], [35.615111, 128.960066], [35.615095, 128.960203], [35.615116, 128.960342], [35.615109, 128.960491], [35.615035, 128.960594], [35.614992, 128.960758], [35.614898, 128.960949], [35.614851, 128.961086], [35.614783, 128.961388], [35.614728, 128.961475], [35.614581, 128.961625], [35.614421, 128.961776], [35.614343, 128.961862], [35.614226, 128.962124], [35.614128, 128.962348], [35.61412, 128.962569], [35.614118, 128.96269], [35.614155, 128.962879], [35.614192, 128.963089], [35.614176, 128.963265], [35.614156, 128.963381], [35.614131, 128.963551], [35.614241, 128.96367], [35.614289, 128.963809], [35.614309, 128.963936], [35.614298, 128.96409], [35.614294, 128.964289], [35.614299, 128.964537], [35.614297, 128.964686], [35.614312, 128.964896], [35.614323, 128.965035], [35.614271, 128.965171], [35.614201, 128.965341], [35.614181, 128.965461], [35.61419, 128.965738], [35.614136, 128.96599], [35.614096, 128.966237], [35.614061, 128.966441], [35.614096, 128.966789], [35.61403, 128.966964], [35.613964, 128.967139], [35.613911, 128.967358], [35.613886, 128.967474], [35.613922, 128.967767], [35.613986, 128.967865], [35.613992, 128.967926], [35.613978, 128.968075], [35.613969, 128.968199], [35.613979, 128.968306], [35.613983, 128.968447], [35.613996, 128.968635], [35.614006, 128.968815], [35.614019, 128.969005], [35.614026, 128.969157], [35.614031, 128.969353], [35.614006, 128.969546], [35.614015, 128.969676], [35.614042, 128.969825], [35.614064, 128.969967], [35.614093, 128.970152], [35.614119, 128.970332], [35.614154, 128.970509], [35.614172, 128.970686], [35.61416, 128.970832], [35.61413, 128.971047], [35.614109, 128.971215], [35.614055, 128.971362], [35.613968, 128.971573], [35.61387, 128.97181], [35.613792, 128.971993], [35.613745, 128.972116], [35.613655, 128.972241], [35.61354, 128.972398], [35.613422, 128.972569], [35.613282, 128.972742], [35.613172, 128.972891], [35.613107, 128.972854], [35.613053, 128.972816], [35.612972, 128.972715], [35.612921, 128.972521], [35.612812, 128.972435], [35.612779, 128.972374], [35.612713, 128.972284], [35.612653, 128.97223], [35.612569, 128.972151], [35.612436, 128.972136], [35.612407, 128.972136], [35.612304, 128.972103], [35.612176, 128.972044], [35.612132, 128.972021], [35.612035, 128.971859], [35.61195, 128.971711], [35.611866, 128.971582], [35.611842, 128.971551], [35.611769, 128.971472], [35.61168, 128.971362], [35.61165, 128.971295], [35.611579, 128.971213], [35.611513, 128.971132], [35.611471, 128.971059], [35.611407, 128.971019], [35.611336, 128.970934], [35.611264, 128.97091], [35.611164, 128.970878], [35.611106, 128.970799], [35.610997, 128.970741], [35.610941, 128.970737], [35.610883, 128.97068], [35.610809, 128.970665], [35.610719, 128.970654], [35.610644, 128.97057], [35.610566, 128.97051], [35.610441, 128.970454], [35.610353, 128.97046], [35.610262, 128.970458], [35.610183, 128.970384], [35.610129, 128.970345], [35.610055, 128.97031], [35.610013, 128.970287], [35.609988, 128.970283], [35.609897, 128.970215], [35.60979, 128.970124], [35.60974, 128.970056], [35.609646, 128.969974], [35.609569, 128.969914], [35.609461, 128.969845], [35.609363, 128.969799], [35.60924, 128.969738], [35.609142, 128.969667], [35.609058, 128.969573], [35.608962, 128.969524], [35.608895, 128.969484], [35.608815, 128.969443], [35.608736, 128.969422], [35.60859, 128.96941], [35.608514, 128.969372], [35.608443, 128.969324], [35.608392, 128.969229], [35.608338, 128.969106], [35.608287, 128.969047], [35.608209, 128.969004], [35.608075, 128.968934], [35.608009, 128.968847], [35.607943, 128.968774], [35.607838, 128.968694], [35.607745, 128.968601], [35.60767, 128.968508], [35.607643, 128.968479], [35.607582, 128.968373], [35.607523, 128.968261], [35.607499, 128.968236], [35.607461, 128.968213], [35.607407, 128.968203], [35.607315, 128.968179], [35.607237, 128.968105], [35.607094, 128.968036], [35.607054, 128.968024], [35.606961, 128.968049], [35.606883, 128.968008], [35.606829, 128.967993], [35.606744, 128.967958], [35.606642, 128.967867], [35.606539, 128.967812], [35.606421, 128.967749], [35.606328, 128.967747], [35.606212, 128.967689], [35.606203, 128.967675], [35.606095, 128.967661], [35.606015, 128.967612], [35.605944, 128.967541], [35.605873, 128.967468], [35.605817, 128.967442], [35.605758, 128.967344], [35.605699, 128.967254], [35.605626, 128.967167], [35.605537, 128.967073], [35.605458, 128.966997], [35.605371, 128.966915], [35.605306, 128.966916], [35.605204, 128.966919], [35.605087, 128.966944], [35.604985, 128.966941], [35.604875, 128.966919], [35.604781, 128.966903], [35.604682, 128.966895], [35.604543, 128.966823], [35.604446, 128.966735], [35.60435, 128.96668], [35.604327, 128.966669], [35.604299, 128.966616], [35.60428, 128.966549], [35.604209, 128.966503], [35.6042, 128.966497], [35.604151, 128.966446], [35.604089, 128.966359], [35.604056, 128.966309], [35.603981, 128.966216], [35.603916, 128.966076], [35.603829, 128.966027], [35.603784, 128.966021], [35.60368, 128.966007], [35.603636, 128.965981], [35.60362, 128.965964], [35.603546, 128.965938], [35.60354, 128.965946], [35.603477, 128.965911], [35.603416, 128.965907], [35.603291, 128.965852], [35.603192, 128.965868], [35.603113, 128.965847], [35.602969, 128.965844], [35.602917, 128.965837], [35.602793, 128.965842], [35.602671, 128.965864], [35.602548, 128.965941], [35.602437, 128.965974], [35.602283, 128.966056], [35.602078, 128.966054], [35.601933, 128.966116], [35.601767, 128.966049], [35.601624, 128.966009], [35.601464, 128.965959], [35.601328, 128.965884], [35.601174, 128.965797], [35.601063, 128.965728], [35.600909, 128.965617], [35.600761, 128.965558], [35.600624, 128.96553], [35.600479, 128.965479], [35.60036, 128.965441], [35.600263, 128.965422], [35.600197, 128.96537], [35.60014, 128.965281], [35.600093, 128.965244], [35.600041, 128.965234], [35.599991, 128.96515], [35.599946, 128.965141], [35.599907, 128.965043], [35.59988, 128.965015], [35.599844, 128.965014], [35.599806, 128.96503], [35.599753, 128.965081], [35.599705, 128.965121], [35.599635, 128.965166], [35.59956, 128.965189], [35.599492, 128.965196], [35.599375, 128.965201], [35.599249, 128.965198], [35.599116, 128.965203], [35.59897, 128.965189], [35.598915, 128.965201], [35.598863, 128.965225], [35.598816, 128.965226], [35.598769, 128.965222], [35.598722, 128.965196], [35.598657, 128.965167], [35.598567, 128.965132], [35.598478, 128.965088], [35.598431, 128.965068], [35.598352, 128.965052], [35.598299, 128.965015], [35.598217, 128.964936], [35.598193, 128.964897], [35.598174, 128.964816], [35.598161, 128.96478], [35.598132, 128.964724], [35.598091, 128.964657], [35.598071, 128.964623], [35.598063, 128.964576], [35.598087, 128.964494], [35.598113, 128.964426], [35.598143, 128.964358], [35.598148, 128.964294], [35.598138, 128.964225], [35.59811, 128.964175], [35.598061, 128.96411], [35.598017, 128.964057], [35.597975, 128.964022], [35.597944, 128.964005], [35.59791, 128.964004], [35.59786, 128.963998], [35.5978, 128.963996], [35.597748, 128.963987], [35.597717, 128.963969], [35.597677, 128.96393], [35.597617, 128.963862], [35.597549, 128.963783], [35.597484, 128.963729], [35.597446, 128.963703], [35.597384, 128.963669], [35.597323, 128.963637], [35.59729, 128.963628], [35.597206, 128.963637], [35.597129, 128.963651], [35.597032, 128.963682], [35.596948, 128.963702], [35.596838, 128.963727], [35.596778, 128.96377], [35.596712, 128.963818], [35.596635, 128.963863], [35.59653, 128.963918], [35.596426, 128.963844], [35.596361, 128.963812], [35.596242, 128.963759], [35.59616, 128.963675], [35.59607, 128.963562], [35.596002, 128.963453], [35.595947, 128.963333], [35.595917, 128.963249], [35.595865, 128.963143], [35.595799, 128.963037], [35.595742, 128.962936], [35.5957, 128.962897], [35.595648, 128.962876], [35.595597, 128.962875], [35.595513, 128.962889], [35.595434, 128.962904], [35.595384, 128.962911], [35.595299, 128.96289], [35.595247, 128.962886], [35.595168, 128.962933], [35.595097, 128.962987], [35.595063, 128.963019], [35.595002, 128.963026], [35.594952, 128.963014], [35.594874, 128.96299], [35.594795, 128.962985], [35.594741, 128.962975], [35.594712, 128.962955], [35.594701, 128.962933], [35.594691, 128.9629], [35.594687, 128.96285], [35.594666, 128.962753], [35.594608, 128.962688], [35.594553, 128.962629], [35.59452, 128.962606], [35.594506, 128.962594], [35.594491, 128.962583], [35.594461, 128.962585], [35.594414, 128.9626], [35.594355, 128.962616], [35.594254, 128.96261], [35.594107, 128.962615], [35.594008, 128.962621], [35.593941, 128.962608], [35.593914, 128.962588], [35.593886, 128.962488], [35.593839, 128.962369], [35.59372, 128.96233], [35.593635, 128.962314], [35.593556, 128.962282], [35.593454, 128.96218], [35.593381, 128.962084], [35.593324, 128.962], [35.593285, 128.961916], [35.59322, 128.961785], [35.593178, 128.961737], [35.593117, 128.961744], [35.593016, 128.961711], [35.592963, 128.961652], [35.592902, 128.961526], [35.59285, 128.961407], [35.592806, 128.961342], [35.592765, 128.961316], [35.592725, 128.961304], [35.59268, 128.96132], [35.592641, 128.961349], [35.59257, 128.961403], [35.592499, 128.961478], [35.592421, 128.961562], [35.592339, 128.961623]]
+};
+var COURSES = [
+  {id:0,name:'석남터널코스',diff:'easy',dist:6.8,time:220,kcal:580,oneWay:true,s:[35.608408, 129.025607],e:[35.620281, 129.002935],summit:true,eName:'가지산 정상(1,241m)',desc:'석남터널 입구에서 출발해 중봉을 거쳐 가지산 정상(1,241m)에 오르는 왕복 약 6.8km 코스입니다. 석남터널 인근 도로변에 주차 후 바로 산행을 시작하며, 가파른 초반 오르막을 넘으면 중봉 능선이 펼쳐집니다. 중봉에서 가지산 정상까지는 영남알프스의 장쾌한 능선이 이어지며, 정상에서는 운문산·천황산·신불산 등 영남알프스 전 봉우리가 360도로 조망됩니다. 가을 억새와 겨울 상고대가 특히 아름다운 코스입니다. ⚠️ 초반 급경사 주의, 겨울철 아이젠 필수.',tags:['최단코스','정상조망','억새','상고대','능선']},
+  {id:1,name:'석남사코스',diff:'easy',dist:10.0,time:330,kcal:700,oneWay:false,s:[35.618087,129.039279],e:[35.618087,129.039279],summit:false,eName:'석남사 주차장',desc:'석남사 주차장에서 출발해 석남사를 거쳐 쌀바위·가지산 정상(1,241m)에 오르는 원점회귀 약 10km 대표 코스입니다. 신라 헌덕왕 16년(824년) 도의국사가 창건한 천년고찰 석남사를 탐방하며 산행을 시작할 수 있어 사찰 탐방과 등산을 동시에 즐길 수 있습니다. 석남사 경내를 지나 능선을 따라 오르면 기암괴석인 쌀바위가 나타나며, 이후 정상까지 완만한 능선길이 이어집니다. 정상 부근 가지산장에서는 컵라면·막걸리를 판매합니다. 가을 단풍과 억새 시즌에 특히 인기가 높습니다. ⚠️ 원점회귀 코스, 겨울철 아이젠 필수, 가을 성수기 주차 혼잡.',tags:['석남사','쌀바위','사찰탐방','억새','가을단풍','대표코스']},
+  {id:2,name:'운문령코스',diff:'medium',dist:10.0,time:300,kcal:980,oneWay:true,s:[35.636027, 129.040049],e:[35.620265, 129.002926],summit:true,eName:'가지산 정상(1,241m)',desc:'운문령에서 귀바위·상운산·쌀바위를 거쳐 가지산 정상(1,241m)에 오르는 왕복 약 10km 능선 코스입니다. 운문령(해발 690m)에서 시작해 능선을 따라 걷는 코스로 처음부터 시원한 조망을 즐길 수 있습니다. 귀바위는 커다란 바위가 귀 모양을 닮아 붙여진 이름으로 포토존으로 인기입니다. 상운산(1,114m)을 지나 쌀바위에 이르는 능선은 영남알프스의 진수를 맛볼 수 있는 구간입니다. 가을에는 억새밭이 장관을 이룹니다. ⚠️ 장거리 코스·충분한 식수 준비, 겨울철 아이젠 필수.',tags:['능선종주','귀바위','상운산','쌀바위','억새','조망']},
+  {id:3,name:'운문산연계코스',diff:'medium',dist:13.0,time:400,kcal:1300,oneWay:true,s:[35.608431, 129.025613],e:[35.6153, 128.9588],summit:true,eName:'운문산(1,195m)',desc:'석남터널에서 가지산(1,241m)을 거쳐 아랫재·운문산(1,195m)까지 이어지는 약 13km 종주 코스입니다. 영남알프스 8봉 인증을 위해 가지산과 운문산을 하루에 완주하는 인기 코스입니다. 석남터널에서 중봉·가지산 정상을 밟은 후 아랫재를 거쳐 운문산까지 이어지는 장쾌한 능선 산행입니다. 체력 안배가 중요하며 가지산·운문산 두 봉우리의 정상 조망이 하이라이트입니다. 날머리는 상양마을이며 사전에 교통편을 준비해야 합니다. ⚠️ 장거리 종주·체력 안배 필수, 날머리 교통편 사전 준비, 겨울철 아이젠 필수.',tags:['영남알프스8봉','종주','가지산','운문산','인증코스','장거리']},
+];
+
+var WAYPTS = {
+  0:{wps:[{km:0,name:'석남터널'},{km:1.5,name:'중봉'},{km:3.0,name:'가지산'}],segs:[{diff:'hard',time:60},{diff:'normal',time:40}],elevs:[650,1010,1241]},
+  1:{wps:[{km:0,name:'석남사 주차장'},{km:0.5,name:'석남사'},{km:2.5,name:'쌀바위'},{km:5.0,name:'가지산'},{km:6.5,name:'중봉'},{km:10.0,name:'석남사 주차장'}],segs:[{diff:'normal',time:20},{diff:'normal',time:60},{diff:'hard',time:50},{diff:'normal',time:40},{diff:'normal',time:80}],elevs:[400,450,1070,1241,1010,400]},
+  2:{wps:[{km:0,name:'운문령'},{km:1.5,name:'귀바위'},{km:3.5,name:'상운산'},{km:4.5,name:'쌀바위'},{km:5.0,name:'가지산'}],segs:[{diff:'normal',time:50},{diff:'normal',time:70},{diff:'normal',time:40},{diff:'normal',time:30}],elevs:[690,850,1114,1070,1241]},
+  3:{wps:[{km:0,name:'석남터널'},{km:1.5,name:'중봉'},{km:3.0,name:'가지산'},{km:6.0,name:'아랫재'},{km:9.5,name:'운문산'},{km:13.5,name:'상양마을'}],segs:[{diff:'hard',time:60},{diff:'normal',time:40},{diff:'normal',time:60},{diff:'hard',time:80},{diff:'normal',time:100}],elevs:[650,1010,1241,870,1195,350]}
+};
+var DC = {veryeasy:'#52b788',easy:'#2d9c5a',normal:'#4a90d9',hard:'#f5a0b5'};
+
+function smoothRoute(pts) {
+  if (!pts||pts.length<2) return pts||[];
+  var r=[];
+  for (var i=0;i<pts.length-1;i++) {
+    var p0=pts[Math.max(i-1,0)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(i+2,pts.length-1)];
+    for (var t=0;t<10;t++) {
+      var tt=t/10,t2=tt*tt,t3=t2*tt;
+      r.push([
+        0.5*((2*p1[0])+(-p0[0]+p2[0])*tt+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3),
+        0.5*((2*p1[1])+(-p0[1]+p2[1])*tt+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3)
+      ]);
+    }
+  }
+  r.push(pts[pts.length-1]);
+  return r;
+}
+
+function makeRoute(c) {
+  var pts=COURSE_GPS[c.id];
+  return (pts&&pts.length>=2)?smoothRoute(pts):[c.s,c.e];
+}
+
+var gMap,gMarkers=[],gFull=null,gProg=null,gSM=null,gEM=null,gWayMarkers=[];
+var gCourse=null,gRoute=[],gTimer=null,gStep=0;
+var gMarker4=null; // 4번째 캐릭터(나) 전용 마커
+
+function addWayMarkers(c){
+  gWayMarkers.forEach(function(m){m.remove();});
+  gWayMarkers=[];
+  if(!gRoute.length)return;
+
+  // 코스별 경유지 (GPS 경로 실제 좌표)
+  var WPS={
+    1:[
+      {name:'가지산 정상', lat:35.6203, lng:129.0029, tipPos:'bottom-left',
+       info:'영남알프스 최고봉 · 해발 1,241m<br>360도 파노라마 조망'}
+    ]
+  };
+
+  var wps=WPS[c.id];
+  if(!wps)return;
+
+  wps.forEach(function(wp){
+    var lines = wp.info.split('<br>');
+    var tooltipContent = lines.map(function(l){
+      return '<div style="white-space:nowrap;">'+l+'</div>';
+    }).join('');
+    var uid = 'wp_' + Math.random().toString(36).slice(2);
+    var isSummit = wp.name.indexOf('정상') >= 0;
+    var content = '<div style="position:relative;display:inline-block;cursor:pointer;" id="'+uid+'">'
+      + '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;position:relative;left:-10px;top:-18px;">'
+      + (isSummit
+        ? '<div style="background:#c00;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.5)">🏔</div>'
+          + '<div style="background:#c00;color:#fff;font-size:7px;font-weight:700;padding:1px 4px;border-radius:3px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.4)">'+wp.name+'</div>'
+        : '<div style="background:#2d6a4f;color:#fff;font-size:9px;font-weight:700;'
+          + 'padding:2px 6px;border-radius:3px;white-space:nowrap;'
+          + 'box-shadow:0 1px 3px rgba(0,0,0,.4)">🚩 '+wp.name+'</div>'
+        )
+      + '</div>'
+      + '<div class="wp-tip" style="display:none;position:absolute;left:0;top:20px;z-index:999;'
+      + 'background:#333;color:#fff;border-radius:6px;padding:6px 10px;'
+      + 'width:max-content;max-width:240px;font-size:10px;line-height:1.6;word-break:keep-all;'
+      + 'box-shadow:0 2px 8px rgba(0,0,0,.4);">'+tooltipContent+'</div>'
+      + '</div>';
+    var overlay = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(wp.lat, wp.lng),
+      content: content,
+      yAnchor: 0,
+      zIndex: 50
+    });
+    overlay.setMap(gMap);
+    // 툴팁 이벤트는 DOM이 렌더링된 후 등록
+    setTimeout(function(){
+      var el = document.getElementById(uid);
+      if(!el) return;
+      var tip = el.querySelector('.wp-tip');
+      if(!tip) return;
+      el.addEventListener('mouseenter', function(){
+        tip.style.display='block';
+        var pos=wp.tipPos||'bottom-left';
+        if(pos.indexOf('bottom')>=0){tip.style.top='20px';tip.style.bottom='auto';}
+        else{tip.style.bottom='20px';tip.style.top='auto';}
+        if(pos==='bottom-center'||pos==='top-center'){
+          tip.style.left='50%';tip.style.right='auto';tip.style.transform='translateX(-50%)';}
+        else if(pos.indexOf('left')>=0){tip.style.left='auto';tip.style.right='0';tip.style.transform='';}
+        else{tip.style.right='auto';tip.style.left='0';tip.style.transform='';}
+      });
+      el.addEventListener('mouseleave', function(){ tip.style.display='none'; });
+      // 모바일 터치
+      el.addEventListener('click', function(e){
+        e.stopPropagation();
+        tip.style.display = tip.style.display==='block' ? 'none' : 'block';
+      });
+    }, 200);
+    // remove() 호환을 위해 래퍼 객체 저장
+    gWayMarkers.push({remove:function(){ overlay.setMap(null); }});
+  });
+}
+
+// ===== 나의 레벨 테스트 =====
+var TEST_QUESTIONS = [
+  {q:'성별을 선택하세요', opts:['👨 남성','👩 여성'], key:'gender', cols:2},
+  {q:'나이대를 선택하세요', opts:['20대','30대','40대','50대','60대+'], key:'age', cols:3},
+  {q:'등산 빈도는?', opts:['주 2회+','월 2~3회','월 1회','거의 안함'], key:'freq', cols:2},
+  {q:'평균 등산 시간은?', opts:['3시간+','2~3시간','1~2시간','1시간 이하'], key:'time', cols:2},
+  {q:'최근 완주한 코스 난이도는?', opts:['어려움','보통','쉬움','등산 안해봄'], key:'level', cols:2},
+  {q:'평소 운동 여부는?', opts:['매일','주 3회+','가끔','안함'], key:'exercise', cols:2},
+  {q:'평지 1시간 걷기는?', opts:['거뜬함','조금 힘듦','많이 힘듦'], key:'walk', cols:3},
+  {q:'계단 5층 오르기는?', opts:['거뜬함','조금 힘듦','많이 힘듦'], key:'stair', cols:3}
+];
+var TEST_SCORES = {
+  gender:{'👨 남성':0,'👩 여성':-3},
+  age:{'20대':10,'30대':8,'40대':6,'50대':3,'60대+':-1},
+  freq:{'주 2회+':15,'월 2~3회':10,'월 1회':5,'거의 안함':0},
+  time:{'3시간+':15,'2~3시간':10,'1~2시간':5,'1시간 이하':0},
+  level:{'어려움':15,'보통':10,'쉬움':5,'등산 안해봄':0},
+  exercise:{'매일':10,'주 3회+':7,'가끔':3,'안함':0},
+  walk:{'거뜬함':8,'조금 힘듦':4,'많이 힘듦':0},
+  stair:{'거뜬함':7,'조금 힘듦':3,'많이 힘듦':0}
+};
+var EMOJIS_M=['🧗','🏃','🚵','⛷️','🏋️','🧘','🦅','🐻','🦁','🐯'];
+var EMOJIS_F=['🧗‍♀️','🏃‍♀️','🚵‍♀️','🤸‍♀️','🧘‍♀️','🦋','🌸','🌺','🦊','🐼'];
+var tStep=0,tAnswers={},myLevel=1,myEmoji='🧗',myRatio=0.82;
+
+function retakeTest(){
+  clearInterval(gTimer);gTimer=null;gStep=0;setBtn(false);
+  if(gCourse){
+    gMarkers.forEach(function(m,i){if(m)m.setPosition(applyOffset(gCourse.s,i));});
+    if(gMarker4)gMarker4.setPosition(applyOffset(gCourse.s,3));
+    if(gProg)gProg.setPath([]);
+    updateBars(0);
+  }
+  document.getElementById('myTestConfirm').style.display='flex';
+}
+
+function testPrev(){
+  if(tStep>0){tStep--;renderQuestion();}
+}
+
+function renderQuestion(){
+  var q=TEST_QUESTIONS[tStep];
+  var cols=q.cols||2;
+  var html='<div class="test-q">Q'+(tStep+1)+'/8. '+q.q+'</div>';
+  html+='<div class="test-opts" style="grid-template-columns:repeat('+cols+',1fr)">';
+  q.opts.forEach(function(o){
+    var sel=tAnswers[q.key]===o?'sel':'';
+    html+='<button class="test-opt '+sel+(q.key==="gender"?" gender-opt":"")+'" onclick="selectOpt(\''+q.key+'\',\''+o+'\',this)">'+o+'</button>';
+  });
+  html+='</div>';
+  document.getElementById('testContent').innerHTML=html;
+  document.getElementById('btnTestNext').disabled=!tAnswers[q.key];
+  document.getElementById('btnTestNext').textContent=(tStep===TEST_QUESTIONS.length-1)?'결과 보기 →':'다음 →';
+  // 이전 버튼 표시/숨김
+  var prevBtn=document.getElementById('btnTestPrev');
+  if(prevBtn) prevBtn.style.display=tStep>0?'block':'none';
+}
+
+function selectOpt(key,val,el){
+  tAnswers[key]=val;
+  document.querySelectorAll('.test-opt').forEach(function(b){b.classList.remove('sel');});
+  el.classList.add('sel');
+  document.getElementById('btnTestNext').disabled=false;
+}
+
+function testNext(){
+  if(tStep<TEST_QUESTIONS.length-1){tStep++;renderQuestion();}
+  else{showResult();}
+}
+
+function calcScore(){
+  var score=0;
+  Object.keys(tAnswers).forEach(function(k){
+    if(TEST_SCORES[k]&&TEST_SCORES[k][tAnswers[k]]!==undefined)score+=TEST_SCORES[k][tAnswers[k]];
+  });
+  return score;
+}
+
+function showResult(){
+  var score=calcScore();
+  var level,msg,ratio,color;
+  if(score>=60){level='🦅 산대장';msg='대단해요! 어떤 코스도 거뜬히 완주할 능력이에요. 도전적인 코스에 도전해보세요!';ratio=1.0;color='#e63946';}
+  else if(score>=35){level='🧗 산춘기';msg='등산을 즐기는 중급자! 꾸준히 산을 오르며 실력을 쌓아가고 있군요!';ratio=0.82;color='#f4a261';}
+  else{level='🌱 등린이';msg='등산을 시작하는 단계예요! 쉬운 코스부터 천천히 즐기다 보면 금방 실력이 늘어요!';ratio=0.55;color='#74c69d';}
+  myLevel=score>=60?2:score>=35?1:0;myRatio=ratio;
+  var isF=tAnswers['gender']==='👩 여성';
+  var emojiList=isF?EMOJIS_F:EMOJIS_M;
+  var html='<div class="result-emoji">'+level.split(' ')[0]+'</div>';
+  html+='<div class="result-level" style="color:'+color+'">'+level+'</div>';
+  html+='<div class="result-msg">'+msg+'</div>';
+  html+='<div class="test-q">나를 대표할 이모지를 선택하세요!</div>';
+  html+='<div class="emoji-grid">';
+  emojiList.forEach(function(e,i){
+    html+='<div class="emoji-opt'+(i===0?' sel':'')+'" onclick="pickEmoji(this,\''+e+'\')">'+e+'</div>';
+  });
+  html+='</div>';
+  myEmoji=emojiList[0];
+  document.getElementById('testContent').innerHTML=html;
+  var btn=document.getElementById('btnTestNext');
+  btn.textContent='시작하기! 🏔';btn.disabled=false;
+  btn.onclick=function(){finishTest();};
+}
+
+function pickEmoji(el,e){
+  document.querySelectorAll('.emoji-opt').forEach(function(b){b.classList.remove('sel');});
+  el.classList.add('sel');myEmoji=e;
+}
+
+function finishTest(){
+  document.getElementById('myTestWrap').style.display='none';
+  document.getElementById('myEmoji').textContent=myEmoji;
+  var levelNames=['등린이','산춘기','산대장'];
+  document.getElementById('myName').textContent='나 ('+levelNames[myLevel]+')';
+  document.getElementById('myRow').style.display='flex';
+  if(gMarker4){try{gMarker4.setMap(null);}catch(e){}gMarker4=null;}
+  var myContent='<div style="width:34px;height:34px;border-radius:50%;border:3px solid #2d6a4f;'
+    +'box-shadow:0 2px 8px rgba(0,0,0,.6);background:#d8f3dc;display:flex;align-items:center;'
+    +'justify-content:center;font-size:18px;line-height:1;position:relative;left:-17px;top:-17px;">'+myEmoji+'</div>';
+  var startPos=gCourse?gCourse.s:[37.66,127.0];
+  gMarker4=new kakao.maps.CustomOverlay({
+    position: applyOffset(startPos,3),
+    content: myContent,
+    yAnchor: 0,
+    zIndex: 1000
+  });
+  gMarker4.setMap(gMap);
+}
+function confirmYes(){
+  document.getElementById('myTestConfirm').style.display='none';
+  startTest();
+}
+
+function confirmNo(){
+  document.getElementById('myTestConfirm').style.display='none';
+}
+
+function skipTest(){
+  document.getElementById('myTestWrap').style.display='none';
+}
+
+function startTest(){
+  tStep=0;tAnswers={};
+  document.getElementById('btnTestNext').disabled=true;
+  document.getElementById('btnTestNext').onclick=testNext;
+  document.getElementById('btnTestNext').textContent='다음 →';
+  document.getElementById('myTestWrap').style.display='flex';
+  renderQuestion();
+}
+window.addEventListener('load',function(){
+  document.getElementById('myTestConfirm').style.display='flex';
+});
+
+function calcHikeTime(course){
+  // 코스별 과학적 시간 데이터
+  // [등린이, 산춘기, 산대장]
+  var courseData = {
+    // 석남터널코스: 산춘기 왕복 220분(올라가기 130분+내려오기 90분) 기준
+    // 등린이=x1.35, 산춘기=x1.0, 산대장=x0.78
+    0:  { up:[176,130,101], dn:[122,90,70] },
+    9:  { up:[210,155,105], dn:[150,105, 75] },
+  };
+
+  if(courseData[course.id]){
+    var d=courseData[course.id];
+    UP_MIN   = d.up;
+    DN_MIN   = d.dn;
+    // courseData에 등록된 코스는 항상 왕복 합산 (oneWay 무관)
+    HIKE_TIME= [d.up[0]+d.dn[0], d.up[1]+d.dn[1], d.up[2]+d.dn[2]];
+    TOTAL    = HIKE_TIME[0]+0.5;
+    return;
+  }
+
+  // 나머지 코스: 산춘기=course.time 기준, 비율로 계산
+  var upC=course.time;
+  var upD=Math.round(upC*0.78);
+  var upL=Math.round(upC*1.35);
+  UP_MIN=[upL,upC,upD];
+  // 석남사코스(원점회귀): 전체시간=course.time, 왕복분리 없음
+  if(course.id===1){
+    DN_MIN=[0,0,0];
+    HIKE_TIME=[upL,upC,upD];
+  } else if(course.oneWay){
+    DN_MIN=[0,0,0];
+    HIKE_TIME=[upL,upC,upD];
+  } else {
+    var dnC=Math.round(upC*0.71);
+    var dnD=Math.round(dnC*0.78);
+    var dnL=Math.round(dnC*1.35);
+    DN_MIN=[dnL,dnC,dnD];
+    HIKE_TIME=[upL+dnL,upC+dnC,upD+dnD];
+  }
+  TOTAL=HIKE_TIME[0]+0.5;
+}
+var gSavedCenter=null,gSavedZoom=null;
+var TOTAL=360.5;
+var HIKE_TIME=[360, 270, 210];
+var UP_MIN=[210, 155, 105];
+var DN_MIN=[150, 105, 75];
+
+// 카카오맵 전역 변수
+var gPolyline=null; // 전체 경로선
+var gProgPolyline=null; // 진행 경로선
+
+
+// 4명 마커 위치 오프셋 (겹침 방지) - 등린이, 산춘기, 산대장, 나
+var MARKER_OFFSETS = [
+  [-0.0003, -0.0003], // 등린이: 남서
+  [-0.0003,  0.0003], // 산춘기: 남동
+  [ 0.0003, -0.0003], // 산대장: 북서
+  [ 0.00040,  0.00040]  // 나: 북동
+];
+
+function applyOffset(pos, idx) {
+  var lat = pos[0]!==undefined ? pos[0] : pos.lat;
+  var lng = pos[1]!==undefined ? pos[1] : pos.lng;
+  return new kakao.maps.LatLng(lat + MARKER_OFFSETS[idx][0], lng + MARKER_OFFSETS[idx][1]);
+}
+
+// 카카오맵용 헬퍼: 마커 위치 설정
+function setMarkerPos(overlay, kakaoLatLng) {
+  overlay.setPosition(kakaoLatLng);
+}
+
+// 배열 좌표 → 카카오 LatLng
+function toKakaoLatLng(pos) {
+  if (pos instanceof kakao.maps.LatLng) return pos;
+  var lat = pos[0]!==undefined ? pos[0] : pos.lat;
+  var lng = pos[1]!==undefined ? pos[1] : pos.lng;
+  return new kakao.maps.LatLng(lat, lng);
+}
+
+// 경로 배열 → 카카오 LatLng 배열
+function routeToKakao(route) {
+  return route.map(function(p) { return toKakaoLatLng(p); });
+}
+
+function initMap() {
+  var container = document.getElementById('map');
+  var options = {
+    center: new kakao.maps.LatLng(35.600, 128.980),
+    level: 5
+  };
+  gMap = new kakao.maps.Map(container, options);
+
+  // 지도 타입 컨트롤 추가
+  var mapTypeControl = new kakao.maps.MapTypeControl();
+  gMap.addControl(mapTypeControl, kakao.maps.ControlPosition.TOPRIGHT);
+  var zoomControl = new kakao.maps.ZoomControl();
+  gMap.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
+
+  // 3명 마커 초기 생성
+  for (var i = 0; i < 3; i++) {
+    (function(idx) {
+      var imgUrl = FACES[idx];
+      var content = '<div style="width:36px;height:36px;border-radius:50%;border:3px solid '
+        + BC[idx] + ';box-shadow:0 2px 6px rgba(0,0,0,.5);background:url(\''
+        + imgUrl + '\') center/cover no-repeat;overflow:hidden;position:relative;left:-18px;top:-18px;"></div>';
+      var customOverlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(35.600, 128.980),
+        content: content,
+        yAnchor: 0
+      });
+      customOverlay.setMap(gMap);
+      gMarkers[idx] = customOverlay;
+    })(i);
+  }
+  gMarker4 = null;
+}
+
+function pick(id) {
+  clearInterval(gTimer);gTimer=null;setBtn(false);
+  gCourse=COURSES.find(function(c){return c.id===id;});
+  calcHikeTime(gCourse);
+  gRoute=makeRoute(gCourse);gStep=0;
+  document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('on-e','on-m');});
+  var cb=document.getElementById('cb'+id);
+  if(cb) cb.classList.add(gCourse.diff==='easy'?'on-e':'on-m');
+  document.getElementById('ciName').textContent=(gCourse.diff==='easy'?'🟢 ':'🔵 ')+gCourse.name;
+  document.getElementById('ciDesc').textContent=gCourse.desc;
+  document.getElementById('ciTags').innerHTML=gCourse.tags.map(function(t){return'<span class="tag '+(gCourse.diff==='medium'?'m':'')+'">'+ t+'</span>';}).join('');
+  updateBars(0);drawElev(gCourse);
+  if(!gMap) return; // 카카오맵 미로드 시 지도 관련 코드 건너뜀
+  if(gFull) { gFull.setMap(null); gFull=null; }
+  if(gProg) { gProg.setMap(null); gProg=null; }
+  if(gProgPolyline) { gProgPolyline.setMap(null); gProgPolyline=null; }
+  if(gSM) { gSM.setMap(null); gSM=null; }
+  if(gEM) { gEM.setMap(null); gEM=null; }
+
+  // 전체 경로선 (회색 배경선)
+  var kakaoRoute = routeToKakao(gRoute);
+  gFull = new kakao.maps.Polyline({
+    path: kakaoRoute,
+    strokeWeight: 4,
+    strokeColor: '#aaa',
+    strokeOpacity: 0.5,
+    strokeStyle: 'solid'
+  });
+  gFull.setMap(gMap);
+
+  // 진행 경로선 (초록색)
+  gProg = new kakao.maps.Polyline({
+    path: [],
+    strokeWeight: 6,
+    strokeColor: '#1b7e3e',
+    strokeOpacity: 1,
+    strokeStyle: 'solid'
+  });
+  gProg.setMap(gMap);
+
+  // 출발 마커
+  var startNames = {
+    0:'석남터널 입구', 1:'석남사 주차장',
+    2:'운문령', 3:'석남터널 입구'
+  };
+  var startLabel = startNames[gCourse.id] || gCourse.name;
+  var startContent = '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;position:relative;left:-10px;top:-18px;">'
+    + '<div style="background:#2d6a4f;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.5)">🏛</div>'
+    + '<div style="background:#2d6a4f;color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.4)">'
+    + startLabel + '</div></div>';
+  gSM = new kakao.maps.CustomOverlay({
+    position: toKakaoLatLng(gCourse.s),
+    content: startContent,
+    yAnchor: 0,
+    zIndex: 100
+  });
+  gSM.setMap(gMap);
+
+  // 도착 마커 (원점회귀 코스는 표시 안함)
+  if(gCourse.id !== 1){
+  var endContent;
+  if(gCourse.summit){
+    var summitLabel = gCourse.eName || '정상';
+    endContent = '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;position:relative;left:-10px;top:-18px;">'
+      + '<div style="background:#c00;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.5)">🏔</div>'
+      + '<div style="background:#c00;color:#fff;font-size:7px;font-weight:700;padding:1px 4px;border-radius:3px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.4)">'+summitLabel+'</div></div>';
+  } else {
+    endContent = '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;position:relative;left:-10px;top:-18px;">'
+      + '<div style="background:#e9a030;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.5)">🏆</div>'
+      + '<div style="background:#e9a030;color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.4)">도착</div></div>';
+  }
+  gEM = new kakao.maps.CustomOverlay({
+    position: toKakaoLatLng(gCourse.e),
+    content: endContent,
+    yAnchor: 0,
+    zIndex: 100
+  });
+  gEM.setMap(gMap);
+  } // end if(gCourse.id !== 1)
+
+  // 마커 위치 이동
+  gMarkers.forEach(function(m,i){if(m) m.setPosition(applyOffset(gCourse.s,i));});
+  if(gMarker4) gMarker4.setPosition(applyOffset(gCourse.s,3));
+
+  // 지도 범위 맞추기
+  var bounds = new kakao.maps.LatLngBounds();
+  kakaoRoute.forEach(function(latlng){ bounds.extend(latlng); });
+  gMap.setBounds(bounds, 40, 40, 40, 40);
+  addWayMarkers(gCourse);
+}
+
+function goClick() {
+  if(!gCourse){alert('코스를 먼저 선택하세요!');return;}
+  if(!gMap){alert('카카오맵이 아직 로드되지 않았습니다.\nGitHub Pages에서 실행해 주세요!');return;}
+  if(gTimer)return;
+  if(gStep>=TOTAL){gStep=0;gMarkers.forEach(function(m,i){if(m)m.setPosition(applyOffset(gCourse.s,i));});if(gMarker4)gMarker4.setPosition(applyOffset(gCourse.s,3));if(gProg)gProg.setPath([]);updateBars(0);}
+  setBtn(true);
+  // 나의 완주시간 포함해서 TOTAL 동적 계산
+  // 석남사코스(원점회귀)는 course.time 전체를 기준으로 함
+  var myTotalForTimer = gMarker4 ? (gCourse.id===1 ? gCourse.time : gCourse.oneWay ? HIKE_TIME[myLevel] : UP_MIN[myLevel]+DN_MIN[myLevel]) : 0;
+  var dynamicTotal = Math.max(TOTAL, myTotalForTimer);
+  gTimer=setInterval(function(){
+    var spd=parseInt(document.getElementById('spd').value);
+    //
+    //
+    gStep = Math.min(gStep + spd*0.06, dynamicTotal);
+    var N=gRoute.length;
+    var allDone=true;
+    var isOneWay = gCourse.oneWay === true || gCourse.id === 1;
+
+    // ── 3명 각자 독립적으로 이동 ──
+    for(var i=0;i<3;i++){
+      var elapsed = gStep;
+      var upMin   = UP_MIN[i];
+      var dnMin   = DN_MIN[i];
+      var totalMin= HIKE_TIME[i];
+      var pos;
+
+      if(isOneWay){
+        if(elapsed < totalMin){
+          var hp = elapsed / totalMin;
+          pos = Math.min(Math.floor(hp*(N-1)), N-1);
+          allDone = false;
+        } else {
+          pos = N-1;
+        }
+      } else {
+        if(elapsed < upMin){
+          var hp = elapsed / upMin;
+          pos = Math.min(Math.floor(hp*(N-1)), N-1);
+          allDone = false;
+        } else if(elapsed < totalMin){
+          var dp = (elapsed - upMin) / dnMin;
+          pos = Math.min(Math.floor((1-dp)*(N-1)), N-1);
+          allDone = false;
+        } else {
+          pos = 0;
+        }
+      }
+      gMarkers[i].setPosition(applyOffset(gRoute[Math.max(0, Math.min(pos, N-1))], i));
+    }
+
+    // ── 4번째 캐릭터(나) 이동 ──
+    if(gMarker4){
+      var myUpMin = UP_MIN[myLevel];
+      var myDnMin = DN_MIN[myLevel];
+      var myTotalMin = isOneWay ? HIKE_TIME[myLevel] : myUpMin+myDnMin;
+      var myPos;
+      if(isOneWay){
+        if(gStep < myTotalMin){
+          var hp=gStep/myTotalMin;
+          myPos=Math.min(Math.floor(hp*(N-1)),N-1);
+          allDone=false;
+        } else { myPos=N-1; }
+      } else {
+        if(gStep < myUpMin){
+          var hp=gStep/myUpMin;
+          myPos=Math.min(Math.floor(hp*(N-1)),N-1);
+          allDone=false;
+        } else if(gStep < myTotalMin){
+          var dp=(gStep-myUpMin)/myDnMin;
+          myPos=Math.min(Math.floor((1-dp)*(N-1)),N-1);
+          allDone=false;
+        } else { myPos=0; }
+      }
+      var rawPos=gRoute[Math.max(0,Math.min(myPos,N-1))];
+      gMarker4.setPosition(applyOffset(rawPos, 3));
+    }
+
+    // 산대장 기준 녹색 등산로
+    var elapsed2 = gStep;
+    if(isOneWay){
+      var hp2 = Math.min(elapsed2 / HIKE_TIME[2], 1);
+      var pi2 = Math.min(Math.floor(hp2*(N-1)), N-1);
+      gProg.setPath(routeToKakao(gRoute.slice(0, pi2+1)));
+    } else if(elapsed2 < UP_MIN[2]){
+      var hp2 = elapsed2 / UP_MIN[2];
+      var pi2 = Math.min(Math.floor(hp2*(N-1)), N-1);
+      gProg.setPath(routeToKakao(gRoute.slice(0, pi2+1)));
+    } else {
+      gProg.setPath(routeToKakao(gRoute));
+    }
+
+    updateBars(gStep);
+    if(allDone){ clearInterval(gTimer); gTimer=null; setBtn(false); }
+  },50);
+}
+
+function resetClick(){
+  clearInterval(gTimer);gTimer=null;gStep=0;setBtn(false);
+  if(gCourse){
+    gMarkers.forEach(function(m,i){if(m)m.setPosition(applyOffset(gCourse.s,i));});
+    if(gMarker4)gMarker4.setPosition(applyOffset(gCourse.s,3));
+    if(gProg)gProg.setPath([]);
+    updateBars(0);
+  }
+}
+
+function setBtn(b){
+  var btn=document.getElementById('btnGo');
+  btn.textContent=b?'⏸ 진행 중...':'▶ 출발';
+  b?btn.classList.add('busy'):btn.classList.remove('busy');
+  btn.onclick=b?null:goClick;
+}
+
+function toHMS(mins){
+  var h=Math.floor(mins/60),m=Math.round(mins%60);
+  if(h>0) return h+'시간 '+(m<10?'0'+m:m)+'분';
+  return m+'분';
+}
+
+function updateBars(step){
+  if(!gCourse)return;
+  var elapsed = step;
+  var isOneWay = gCourse.oneWay === true || gCourse.id === 1;
+  for(var i=0;i<3;i++){
+    var upMin    = UP_MIN[i];
+    var dnMin    = DN_MIN[i];
+    var totalMin = HIKE_TIME[i];
+    var label, barPct;
+
+    if(elapsed >= totalMin){
+      barPct = 100;
+      label = '✅ 완주 예상 ' + toHMS(totalMin) + '!';
+    } else if(isOneWay){
+      // 종주코스: 편도 누적 거리만 표시
+      var hp = Math.max(0, Math.min(1, elapsed / totalMin));
+      barPct = hp * 100;
+      var distKm = hp * gCourse.dist;
+      label = '⬆ ' + distKm.toFixed(1) + 'km · ' + toHMS(elapsed);
+    } else if(elapsed < upMin){
+      var hp = Math.max(0, Math.min(1, elapsed / upMin));
+      barPct = hp * 50;
+      var distKm = hp * gCourse.dist;
+      label = '⬆ ' + distKm.toFixed(1) + 'km · ' + toHMS(elapsed);
+    } else {
+      var dp = Math.max(0, Math.min(1, (elapsed - upMin) / dnMin));
+      barPct = 50 + dp * 50;
+      var distLeft = Math.max(0, (1-dp) * gCourse.dist);
+      label = '⬇ ' + distLeft.toFixed(1) + 'km · ' + toHMS(elapsed);
+    }
+    document.getElementById('b'+i).style.width = Math.max(0, Math.min(100, barPct)) + '%';
+    document.getElementById('s'+i).textContent = label;
+  }
+  // 4번째 캐릭터(나) 진행률
+  if(document.getElementById('myRow').style.display!=='none'){
+    var myTotalMin=isOneWay?HIKE_TIME[myLevel]:UP_MIN[myLevel]+DN_MIN[myLevel];
+    var myUpMinV=UP_MIN[myLevel];
+    var myDnMinV=DN_MIN[myLevel];
+    var myLabel,myBar;
+    if(elapsed>=myTotalMin){myBar=100;myLabel='✅ 완주 예상 '+toHMS(myTotalMin)+'!';}
+    else if(isOneWay){var hp=Math.min(1,elapsed/myTotalMin);myBar=hp*100;myLabel='⬆ '+(hp*gCourse.dist).toFixed(1)+'km · '+toHMS(elapsed);}
+    else if(elapsed<myUpMinV){var hp=Math.min(1,elapsed/myUpMinV);myBar=hp*50;myLabel='⬆ '+(hp*gCourse.dist).toFixed(1)+'km · '+toHMS(elapsed);}
+    else{var dp=Math.min(1,(elapsed-myUpMinV)/myDnMinV);myBar=50+dp*50;myLabel='⬇ '+Math.max(0,(1-dp)*gCourse.dist).toFixed(1)+'km · '+toHMS(elapsed);}
+    document.getElementById('b3').style.width=Math.max(0,Math.min(100,myBar))+'%';
+    document.getElementById('s3').textContent=myLabel;
+  }
+}
+
+
+
+
+function renderBtns(){
+  function toHour(m){var h=Math.floor(m/60),r=m%60;return h>0?h+'시간 '+(r<10?'0'+r:r)+'분':r+'분';}
+  function mk(c){
+    return '<button class="cbtn" id="cb'+c.id+'" onclick="pick('+c.id+')">'
+      + '<div class="cn">'+c.name+'</div>'
+      + '<div class="cd">'+(c.id===3?'종주 ':c.id===1?'원점회귀 ':'왕복 ')+'약 '+c.dist+'km·'+toHour(c.time)+'</div></button>';
+  }
+  document.getElementById('gEasy').innerHTML=COURSES.filter(function(c){return c.diff==='easy';}).map(mk).join('');
+  document.getElementById('gMed').innerHTML=COURSES.filter(function(c){return c.diff==='medium';}).map(mk).join('');
+}
+
+function drawElev(c){
+  var data=WAYPTS[c.id];
+  var h2=Math.floor(c.time/60),m2=c.time%60;
+  document.getElementById('elevSum').textContent=(c.id===3?'종주 ':c.id===1?'원점회귀 ':'왕복 ')+'약 '+c.dist+'km ('+h2+'시간 '+(m2<10?'0'+m2:m2)+'분)';
+  document.getElementById('elevSummitLabel').textContent=c.id===1?'가지산 정상(1,241m)':c.eName||'가지산 정상(1,241m)';
+
+  if(!data){
+    document.getElementById('elevWaypts').innerHTML='';
+    return;
+  }
+  var wps=data.wps, elevs=data.elevs;
+
+  // 경유지 표시 (이름만)
+  var wpHtml=wps.map(function(wp){
+    return '<div style="text-align:center;font-size:11px;font-weight:700;color:#333;flex:1;">'
+      +wp.name+'</div>';
+  }).join('');
+  document.getElementById('elevWaypts').innerHTML=wpHtml;
+
+  // 부드러운 고도 포인트 생성
+  var pts=[];
+  for(var i=0;i<wps.length-1;i++){
+    var steps=12;
+    for(var s=0;s<steps;s++){
+      var t=s/steps;
+      pts.push(elevs[i]+(elevs[i+1]-elevs[i])*t);
+    }
+  }
+  pts.push(elevs[elevs.length-1]);
+
+  var minE=Math.min.apply(null,elevs)-100;
+  var maxE=Math.max.apply(null,elevs)+80;
+
+  if(window._elevChart) window._elevChart.destroy();
+  var cv=document.getElementById('eCanvas');
+  window._elevChart=new Chart(cv,{
+    type:'line',
+    data:{
+      labels:pts.map(function(_,i){return i;}),
+      datasets:[{
+        data:pts,
+        borderColor:'#2d6a4f',
+        borderWidth:2.5,
+        fill:true,
+        backgroundColor:'rgba(45,106,79,0.15)',
+        tension:0.4,
+        pointRadius:0,
+        pointHoverRadius:3
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return Math.round(ctx.raw).toLocaleString()+'m';}}}},
+      scales:{
+        x:{display:false},
+        y:{
+          min:minE,max:maxE,
+          grid:{color:'rgba(128,128,128,0.1)'},
+          ticks:{font:{size:10},color:'#888',callback:function(v){return v.toLocaleString()+'m';},maxTicksLimit:4},
+          border:{display:false}
+        }
+      }
+    }
+  });
+}
+
+window.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('img0').src=FACES[0];
+  document.getElementById('img1').src=FACES[1];
+  document.getElementById('img2').src=FACES[2];
+  renderBtns();
+  // 북한산 툴팁
+  var tip=document.getElementById('bukhanTip');
+  var box=document.getElementById('bukhanTipBox');
+  tip.addEventListener('mouseenter',function(){box.style.display='block';});
+  tip.addEventListener('mouseleave',function(){box.style.display='none';});
+  tip.addEventListener('touchstart',function(e){
+    e.preventDefault();
+    box.style.display=box.style.display==='block'?'none':'block';
+  });
+  document.addEventListener('touchstart',function(e){
+    if(!tip.contains(e.target))box.style.display='none';
+  });
+  // 카카오맵 SDK 동적 로드 후 지도 초기화
+  loadKakaoSDK(function(){
+    initMap();
+    setTimeout(function(){pick(0);},800);
+  });
+});
+var resizeTimer=null;
+function onDisplayChange(){
+  if(resizeTimer)clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(function(){
+    if(gCourse)drawElev(gCourse);
+    // 카카오맵 relayout
+    if(gMap){
+      gMap.relayout();
+      if(gCourse && gRoute && gRoute.length>1){
+        var bounds = new kakao.maps.LatLngBounds();
+        routeToKakao(gRoute).forEach(function(latlng){ bounds.extend(latlng); });
+        gMap.setBounds(bounds, 40, 40, 40, 40);
+      }
+    }
+  },400);
+}
+window.addEventListener('resize',onDisplayChange);
+document.addEventListener('fullscreenchange',onDisplayChange);
+document.addEventListener('webkitfullscreenchange',onDisplayChange);
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+</body>
+</html>
