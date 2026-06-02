@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>영남알프스 🏔 신불산 v1</title>
+<script>
+// 카카오맵 SDK 동적 로드 함수
+function loadKakaoSDK(callback) {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=009d779e0836e36bfdad5c85304e8c12&autoload=false';
+  script.onload = function() {
+    if(typeof kakao !== 'undefined' && kakao.maps) {
+      kakao.maps.load(callback);
+    } else {
+      showMapFallback();
+    }
+  };
+  script.onerror = function() {
+    showMapFallback();
+  };
+  document.head.appendChild(script);
+}
+function showMapFallback() {
+  var mapDiv = document.getElementById('map');
+  if(mapDiv) {
+    mapDiv.style.background = '#d8f3dc';
+    mapDiv.style.display = 'flex';
+    mapDiv.style.alignItems = 'center';
+    mapDiv.style.justifyContent = 'center';
+    mapDiv.style.flexDirection = 'column';
+    mapDiv.style.gap = '8px';
+    mapDiv.innerHTML = '<div style="font-size:36px">🗺️</div>'
+      + '<div style="font-size:13px;font-weight:700;color:#2d6a4f;">카카오맵 로드 중...</div>'
+      + '<div style="font-size:11px;color:#666;text-align:center;padding:0 20px;">'
+      + 'GitHub Pages에서 정상 작동합니다.<br>'
+      + '<a href="https://Hoon0512.github.io/trail-tracer/sinbulsan.html" target="_blank" '
+      + 'style="color:#2d6a4f;font-weight:700;">▶ 실제 사이트에서 보기</a></div>';
+  }
+  // 지도 없이도 나머지 UI는 동작하게
+  renderBtns();
+}
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:#eee}
+#app{max-width:480px;margin:0 auto;background:#fff;min-height:100vh;box-shadow:0 0 20px rgba(0,0,0,.15)}
+.hdr{background:linear-gradient(135deg,#2d6a4f,#52b788);color:#fff;padding:14px 16px;text-align:center;display:flex;flex-direction:column;align-items:center}
+.hdr h1{font-size:18px;font-weight:700;text-align:center;width:100%}.hdr p{font-size:11px;opacity:.85;margin-top:2px;text-align:center;width:100%}
+#map{width:100%;height:260px;background:#e8f4e8;position:relative;}
+.elev-wrap{background:#fff;border-top:1px solid #e0e0e0;border-bottom:1px solid #e0e0e0;padding:10px 14px 6px}
+.elev-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.elev-legend{display:flex;flex-direction:column;gap:4px;border:1px solid #ccc;border-radius:4px;padding:5px 8px;background:#fff}
+.leg-title{font-size:11px;color:#555;font-weight:600}
+.leg-items{display:flex;gap:8px;align-items:center}
+.leg-item{display:flex;align-items:center;gap:3px;font-size:11px;color:#555;font-weight:600}
+.leg-dot{width:12px;height:12px;border-radius:2px;display:inline-block}
+.leg-dot.n{background:#4a90d9}.leg-dot.h{background:#f5a0b5}.leg-dot.ve{background:#52b788}.leg-dot.e{background:#2d9c5a}
+.wp-tooltip{background:#333;color:#fff;border:none;border-radius:6px;
+  font-size:10px;padding:6px 10px;min-width:200px;max-width:220px;line-height:1.6;
+  word-break:keep-all;text-align:justify;
+  box-shadow:0 2px 8px rgba(0,0,0,.4);}
+.wp-tooltip::before{border-top-color:#333!important;}
+.elev-sum{font-size:13px;font-weight:700;color:#222}
+#eCanvas{display:block;width:100%;height:120px;background:#fff}
+.hikers{padding:10px 12px 4px}
+.hrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.hico{width:36px;flex-shrink:0}
+.hico img{width:34px;height:34px;border-radius:50%;object-fit:cover;display:block}
+.hbody{flex:1}.hname{font-size:11px;font-weight:700}
+.bgbar{background:#e9ecef;border-radius:8px;height:7px;margin-top:3px;overflow:hidden}
+.fgbar{height:100%;border-radius:8px;width:0%}
+.hstat{font-size:11px;color:#888;min-width:90px;text-align:right}
+.sec{padding:10px 12px 0}.sec-title{font-size:12px;font-weight:700;margin-bottom:6px}
+.grid3{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:10px}
+.cbtn{background:#fff;border:1.5px solid #ddd;border-radius:9px;padding:7px 3px;cursor:pointer;font-family:inherit;text-align:center}
+.cbtn:hover{border-color:#52b788;background:#f0fff4}
+.cbtn.on-e{border-color:#2d9e6b;background:#d8f3dc;font-weight:700}
+.cbtn.on-m{border-color:#e9a030;background:#fff3cd;font-weight:700}.on-h{border-color:#e74c3c;background:#fde8e8;font-weight:700}
+.cbtn .cn{font-size:11px;font-weight:600;color:#222}.cbtn .cd{font-size:10px;color:#888;margin-top:1px}
+.cinfo{margin:0 12px 10px;background:#f8f9fa;border-radius:10px;padding:11px 13px}
+.ci-name{font-size:14px;font-weight:700;margin-bottom:5px}
+.ci-desc{font-size:11px;color:#666;line-height:1.65;margin-bottom:7px}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-size:10px;padding:2px 7px;border-radius:20px;background:#d8f3dc;color:#2d6a4f;font-weight:600}
+.tag.m{background:#fff3cd;color:#b07a00}
+.tag.h{background:#fde8e8;color:#c0392b}
+.ctrl{display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid #eee}
+#btnGo{flex:1;background:#2d6a4f;color:#fff;border:none;border-radius:9px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+#btnGo:hover{background:#40916c}#btnGo.busy{background:#aaa;cursor:default}
+#btnRst{background:#fff;border:1.5px solid #ddd;border-radius:9px;padding:12px 14px;font-size:13px;cursor:pointer;font-family:inherit}
+#btnRst:hover{border-color:#e76f51;color:#e76f51}
+.spd-wrap{display:flex;flex-direction:column;align-items:center;gap:2px}
+.spd-wrap label{font-size:10px;color:#888}.spd-wrap input{width:70px;accent-color:#2d6a4f}
+
+/* 나의 레벨 테스트 */
+#myTestWrap{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;}
+#myTestBox{background:#fff;border-radius:16px;padding:20px;width:90%;max-width:420px;max-height:90vh;overflow-y:auto;}
+.test-title{font-size:16px;font-weight:700;color:#2d6a4f;text-align:center;margin-bottom:4px;}
+.test-sub{font-size:11px;color:#888;text-align:center;margin-bottom:16px;}
+.test-q{font-size:13px;font-weight:700;color:#333;margin-bottom:8px;margin-top:14px;}
+.test-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.test-opt{background:#f8f9fa;border:2px solid #ddd;border-radius:8px;padding:8px 6px;font-size:12px;cursor:pointer;text-align:center;font-family:inherit;transition:all 0.2s;}
+.test-opt.sel{border-color:#2d6a4f;background:#d8f3dc;font-weight:700;color:#2d6a4f;}
+.test-opt:hover{border-color:#52b788;}
+.test-opt.gender-opt{font-size:20px;padding:12px;}
+#btnTestNext{width:100%;background:#2d6a4f;color:#fff;border:none;border-radius:9px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:16px;}
+#btnTestNext:disabled{background:#aaa;cursor:default;}
+/* 이모지 선택 */
+.emoji-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0;}
+.emoji-opt{font-size:28px;border:2px solid #ddd;border-radius:10px;padding:8px;cursor:pointer;text-align:center;background:#f8f9fa;}
+.emoji-opt.sel{border-color:#2d6a4f;background:#d8f3dc;}
+/* 결과 화면 */
+.result-emoji{font-size:60px;text-align:center;margin:10px 0;}
+.result-level{font-size:20px;font-weight:700;text-align:center;color:#2d6a4f;margin-bottom:6px;}
+.result-msg{font-size:12px;color:#555;text-align:center;line-height:1.7;margin-bottom:12px;}
+/* 4번째 캐릭터 */
+.my-row{background:#f0fff4;border-radius:10px;padding:6px 8px;margin-bottom:8px;border:2px solid #2d6a4f;}
+</style>
+</head>
+<body>
+<!-- 나의 레벨 테스트 모달 -->
+<div id="myTestWrap" style="display:none">
+  <div id="myTestBox">
+    <div class="test-title">🏔 나의 등산 레벨은?</div>
+    <div class="test-sub">8가지 질문으로 나의 등산 능력을 확인해보세요!</div>
+    <div id="testContent"></div>
+    <button id="btnTestNext" disabled onclick="testNext()">다음 →</button>
+    <button id="btnTestPrev" onclick="testPrev()" style="width:100%;background:#fff;border:1.5px solid #ddd;border-radius:9px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:6px;color:#666;display:none;">← 이전</button>
+    <button onclick="skipTest()" style="width:100%;background:none;border:none;padding:8px;font-size:11px;color:#aaa;cursor:pointer;font-family:inherit;margin-top:4px;">← 뒤로</button>
+  </div>
+</div>
+
+<!-- Yes/No 확인 팝업 -->
+<div id="myTestConfirm" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:28px 24px;width:85%;max-width:380px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:12px;">🏔</div>
+    <div style="font-size:16px;font-weight:700;color:#2d6a4f;margin-bottom:8px;">나의 등산 레벨 테스트</div>
+    <div style="font-size:13px;color:#666;line-height:1.6;margin-bottom:24px;">8가지 질문으로 나의 등산 능력을 확인하고<br>4명과 함께 시뮬레이션해보세요!</div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="confirmNo()" style="flex:1;padding:12px;border:1.5px solid #ddd;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#888;">No</button>
+      <button onclick="confirmYes()" style="flex:1;padding:12px;border:none;border-radius:10px;background:#2d6a4f;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#fff;">Yes</button>
+    </div>
+  </div>
+</div>
+<div id="app">
+  <div class="hdr"><h1>🏔 영남알프스 — <span id="bukhanTip" style="position:relative;cursor:help;border-bottom:1px dotted rgba(255,255,255,0.6)">신불산<div style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:28px;z-index:999;background:rgba(30,30,30,0.95);color:#fff;border-radius:8px;padding:12px 16px;font-size:10px;font-weight:400;line-height:1.8;width:max-content;max-width:300px;box-shadow:0 4px 12px rgba(0,0,0,.4);white-space:normal;text-align:left;" id="bukhanTipBox">영남알프스의 최고봉으로 해발 1,241m입니다.<br>울산·밀양·청도에 걸쳐 있으며<br>영남알프스 8봉 인증 대상 산입니다.<br>가을 억새밭과 겨울 상고대가 유명하며<br>석남사·운문령 등 다양한 등산로가 있습니다.<br>정상에서 영남알프스 전 봉우리가<br>360도로 조망됩니다.</div></span></h1><p>영남알프스 탐방코스 시뮬레이터</p></div>
+  <div id="map"></div>
+  <div class="elev-wrap">
+    <div class="elev-header">
+      <div class="elev-legend">
+        <div class="leg-title" id="elevSummitBadge" style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#1b7e3e;">🏔 <span id="elevSummitLabel">코스를 선택하세요</span></div>
+      </div>
+      <div class="elev-sum" id="elevSum"></div>
+    </div>
+    <div style="position:relative;width:100%;height:120px;">
+      <canvas id="eCanvas" role="img" aria-label="가지산 코스 고도 프로필"></canvas>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;" id="elevWaypts"></div>
+  </div>
+  <div class="hikers">
+    <div class="hrow my-row" id="myRow" style="display:none">
+      <div class="hico"><div id="myEmoji" style="width:34px;height:34px;border-radius:50%;border:3px solid #2d6a4f;background:#d8f3dc;display:flex;align-items:center;justify-content:center;font-size:20px;"></div></div>
+      <div class="hbody"><div class="hname" id="myName">나</div><div class="bgbar"><div class="fgbar" id="b3" style="background:#2d6a4f"></div></div></div>
+      <div class="hstat" id="s3">0.0km · 0분</div>
+      <button onclick="retakeTest()" style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px 4px;flex-shrink:0;" title="레벨 재테스트">🔄</button>
+    </div>
+    <div class="hrow">
+      <div class="hico"><img id="img0" src="" style="border:2px solid #74c69d"></div>
+      <div class="hbody"><div class="hname">등린이</div><div class="bgbar"><div class="fgbar" id="b0" style="background:#74c69d"></div></div></div>
+      <div class="hstat" id="s0">0.0km · 0분</div>
+    </div>
+    <div class="hrow">
+      <div class="hico"><img id="img1" src="" style="border:2px solid #f4a261"></div>
+      <div class="hbody"><div class="hname">등춘기</div><div class="bgbar"><div class="fgbar" id="b1" style="background:#f4a261"></div></div></div>
+      <div class="hstat" id="s1">0.0km · 0분</div>
+    </div>
+    <div class="hrow">
+      <div class="hico"><img id="img2" src="" style="border:2px solid #e63946"></div>
+      <div class="hbody"><div class="hname">등대장</div><div class="bgbar"><div class="fgbar" id="b2" style="background:#e63946"></div></div></div>
+      <div class="hstat" id="s2">0.0km · 0분</div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-title">🟢 쉬움 (2개)</div>
+    <div class="grid3" id="gEasy"></div>
+    <div class="sec-title">🔵 보통 (2개)</div>
+    <div class="grid3" id="gMed"></div>
+    <div class="sec-title" id="secHard">🔴 어려움 (1개)</div>
+    <div class="grid3" id="gHard"></div>
+  </div>
+  <div class="cinfo">
+    <div class="ci-name" id="ciName">코스를 선택하세요</div>
+    <div class="ci-desc" id="ciDesc">위의 버튼을 눌러 탐방코스를 선택하고 ▶출발을 눌러보세요!</div>
+    <div class="tags" id="ciTags"></div>
+  </div>
+  <div class="ctrl">
+    <button id="btnGo" onclick="goClick()">▶ 출발</button>
+    <button id="btnRst" onclick="resetClick()">↺ 리셋</button>
+    <div class="spd-wrap"><label>⏩ 속도</label><input type="range" id="spd" min="1" max="10" value="5"></div>
+  </div>
+</div>
+
+<script>
+var FACES = ["data:image/jpeg;base64,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","data:image/jpeg;base64,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","data:image/jpeg;base64,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"];
+var BC = ['#74c69d','#f4a261','#e63946'];
+var RATIOS = [0.55,0.82,1.0];
+var KMH = [2.0,3.0,4.0];
+
+var GPS9 = [[37.655101,126.949647],[37.654991,126.949676],[37.654966,126.949806],[37.654919,126.949982],[37.654865,126.950197],[37.654793,126.950517],[37.654737,126.950676],[37.654665,126.95088],[37.65459,126.95099],[37.654552,126.951211],[37.65448,126.951438],[37.654487,126.951534],[37.654476,126.951577],[37.654417,126.951733],[37.654397,126.95177],[37.654377,126.951843],[37.654298,126.95192],[37.654181,126.952067],[37.654161,126.952093],[37.654125,126.952147],[37.654086,126.952317],[37.654057,126.952509],[37.654014,126.952603],[37.653893,126.952696],[37.653794,126.952728],[37.653751,126.95283],[37.653701,126.952934],[37.653647,126.953068],[37.6536,126.953181],[37.653584,126.953255],[37.653573,126.953362],[37.653551,126.953453],[37.653494,126.953538],[37.653454,126.953575],[37.653411,126.953651],[37.653407,126.953725],[37.653461,126.953804],[37.653456,126.953855],[37.653486,126.953918],[37.653495,126.954005],[37.653488,126.954076],[37.653452,126.954161],[37.653445,126.954221],[37.653513,126.954402],[37.653506,126.954453],[37.653486,126.954476],[37.653387,126.954496],[37.653321,126.954487],[37.653206,126.954507],[37.653101,126.954547],[37.653033,126.954612],[37.652806,126.954731],[37.652855,126.954901],[37.65286,126.955051],[37.652824,126.955176],[37.652759,126.955337],[37.652691,126.955516],[37.652662,126.955692],[37.652673,126.955819],[37.652748,126.955938],[37.652835,126.956014],[37.652962,126.956029],[37.653099,126.95596],[37.653245,126.955873],[37.653383,126.955833],[37.653482,126.955867],[37.653603,126.955991],[37.653615,126.95609],[37.653595,126.956175],[37.653588,126.956226],[37.653586,126.956326],[37.653601,126.956428],[37.653653,126.956558],[37.653728,126.956671],[37.653784,126.956787],[37.653829,126.956898],[37.653849,126.957],[37.653854,126.957102],[37.653854,126.957209],[37.653874,126.95734],[37.65391,126.957498],[37.653967,126.957617],[37.654021,126.957728],[37.654037,126.957804],[37.654023,126.957867],[37.653992,126.957915],[37.653938,126.957969],[37.653798,126.958074],[37.653672,126.958178],[37.653577,126.9583],[37.653458,126.958439],[37.653424,126.958502],[37.653426,126.958581],[37.65346,126.958674],[37.653535,126.958708],[37.653677,126.958711],[37.653818,126.958674],[37.653909,126.958708],[37.653947,126.958787],[37.653945,126.958881],[37.653913,126.95902],[37.65385,126.959159],[37.653801,126.959394],[37.653747,126.959606],[37.653684,126.959833],[37.653614,126.95996],[37.653526,126.960071],[37.653427,126.960159],[37.653317,126.960306],[37.653218,126.960507],[37.653134,126.960629],[37.653035,126.960788],[37.652979,126.960896],[37.652934,126.961023],[37.652916,126.961171],[37.6529,126.961338],[37.652891,126.961561],[37.652876,126.961703],[37.652795,126.961794],[37.652693,126.961893],[37.652621,126.961958],[37.652549,126.962074],[37.652477,126.962213],[37.652412,126.962338],[37.652326,126.962517],[37.652378,126.962712],[37.652455,126.962794],[37.652531,126.962791],[37.652621,126.96272],[37.652878,126.962508],[37.65309,126.962445],[37.653166,126.962496],[37.653232,126.962695],[37.653241,126.962802],[37.653234,126.962887],[37.65327,126.962998],[37.653264,126.963026],[37.653225,126.963074],[37.653221,126.963179],[37.653149,126.963332],[37.65321,126.963561],[37.65321,126.963629],[37.653216,126.96372],[37.653203,126.963862],[37.65321,126.963924],[37.653268,126.964117],[37.653338,126.964255],[37.653356,126.96438],[37.653404,126.964525],[37.65348,126.964646],[37.653546,126.964777],[37.653638,126.964904],[37.653735,126.965023],[37.653769,126.965128],[37.65378,126.965236],[37.6538,126.965301],[37.653884,126.965377],[37.653981,126.965507],[37.654023,126.965592],[37.654023,126.965649],[37.653996,126.965686],[37.653951,126.965836],[37.653967,126.965966],[37.654019,126.96604],[37.654042,126.966097],[37.654028,126.966119],[37.65399,126.966199],[37.653981,126.9664],[37.654051,126.966482],[37.654082,126.966618],[37.654141,126.966706],[37.654249,126.966992],[37.654377,126.96717],[37.654414,126.967261],[37.654468,126.967337],[37.654432,126.967371],[37.654423,126.967439],[37.654486,126.967621],[37.65452,126.967737],[37.654567,126.967827],[37.65458,126.967898],[37.654603,126.968097],[37.654578,126.968281],[37.654587,126.968493],[37.654587,126.968641],[37.65461,126.968825],[37.65465,126.968929],[37.654698,126.969009],[37.654768,126.969091],[37.654799,126.969199],[37.654856,126.969255],[37.65493,126.969329],[37.655002,126.969405],[37.65509,126.969589],[37.655135,126.969646],[37.655205,126.969706],[37.655225,126.969771],[37.655257,126.969841],[37.655311,126.969915],[37.655351,126.969969],[37.655421,126.969977],[37.655455,126.970054],[37.655504,126.970164],[37.655565,126.970303],[37.655588,126.97036],[37.655597,126.970448],[37.655583,126.970516],[37.65559,126.970626],[37.655604,126.970731],[37.655599,126.97083],[37.655629,126.970955],[37.655633,126.971105],[37.655629,126.971266],[37.655678,126.971544],[37.655635,126.97168],[37.655627,126.971816],[37.65562,126.97185],[37.655663,126.971946],[37.655701,126.972045],[37.655737,126.972156],[37.655717,126.972281],[37.655723,126.972385],[37.655701,126.972496],[37.655724,126.972561],[37.655818,126.972652],[37.655944,126.972813],[37.656034,126.972884],[37.656138,126.97302],[37.656197,126.973088],[37.656179,126.973122],[37.656064,126.973162],[37.656082,126.973227],[37.656035,126.973295],[37.655981,126.97355],[37.656012,126.973717],[37.655992,126.973938],[37.656042,126.974224],[37.656033,126.97434],[37.656037,126.974445],[37.656055,126.974502],[37.656044,126.974635],[37.656055,126.974725],[37.656048,126.974825],[37.656055,126.974978],[37.656094,126.975105],[37.656139,126.975247],[37.656224,126.975315],[37.65626,126.975473],[37.656274,126.975595],[37.656314,126.975652],[37.656459,126.975774],[37.656625,126.975887],[37.656713,126.975961],[37.65679,126.975966],[37.656862,126.975949],[37.65692,126.976006],[37.65695,126.976091],[37.656959,126.976164],[37.656932,126.976218],[37.656851,126.976247],[37.656826,126.976269],[37.65681,126.976315],[37.656824,126.976453],[37.656776,126.976578],[37.656716,126.976844],[37.656738,126.976907],[37.656765,126.976958],[37.656781,126.977012],[37.65681,126.977068],[37.656803,126.977102],[37.656783,126.97715],[37.656785,126.977204],[37.656844,126.977303],[37.656849,126.977428],[37.656889,126.977539],[37.657002,126.97776],[37.657022,126.977839],[37.657069,126.97789],[37.657076,126.977949],[37.657108,126.978003],[37.657105,126.97806],[37.657137,126.978136],[37.657166,126.978298],[37.657128,126.978377],[37.657207,126.978422],[37.65729,126.978465],[37.657288,126.978561],[37.657306,126.978675],[37.657367,126.978728],[37.65743,126.978847],[37.657423,126.978975],[37.657482,126.979048],[37.657484,126.979193],[37.657558,126.979238],[37.657624,126.979303],[37.657673,126.979366],[37.65773,126.979422],[37.657833,126.979442],[37.65793,126.979383],[37.658002,126.979402],[37.658056,126.979346],[37.658094,126.979207],[37.65809,126.97915],[37.658038,126.979045],[37.658038,126.978958],[37.658049,126.978887],[37.658184,126.978595],[37.658317,126.978374],[37.658394,126.97832],[37.658484,126.978431],[37.658567,126.978527],[37.658651,126.978569],[37.658725,126.978521],[37.658761,126.978462],[37.658842,126.978408],[37.658876,126.978357],[37.65886,126.978303],[37.658811,126.978229],[37.658761,126.97817],[37.658741,126.978037],[37.658664,126.977986]]; //
+
+var COURSE_GPS = {
+  // 제1코스 실제 GPS 371포인트
+  0:[
+  [35.556837,129.066758],[35.5569,129.066674],[35.55694,129.066545],[35.556968,129.066466],[35.556968,129.066367],[35.556949,129.066278],[35.55692,129.066159],[35.556831,129.066074],[35.556733,129.065983],[35.556713,129.065872],[35.556656,129.06575],[35.556619,129.065575],[35.556542,129.065443],[35.556459,129.065309],[35.556368,129.065207],[35.556225,129.065151],[35.556144,129.065044],[35.556066,129.06496],[35.555904,129.064834],[35.555861,129.064591],[35.555762,129.064434],[35.555741,129.064213],[35.555772,129.063982],[35.555946,129.0637],[35.555953,129.063512],[35.555889,129.063345],[35.556068,129.063132],[35.556275,129.062878],[35.556435,129.062877],[35.556594,129.062798],[35.556729,129.062702],[35.556806,129.062542],[35.556842,129.062281],[35.556959,129.062173],[35.557055,129.062066],[35.557043,129.061867],[35.557145,129.061679],[35.557139,129.061401],[35.557105,129.061121],[35.557082,129.060892],[35.557067,129.060726],[35.556991,129.060567],[35.556935,129.060395],[35.55689,129.06027],[35.556819,129.060072],[35.556736,129.059913],[35.556664,129.059776],[35.556581,129.059633],[35.556511,129.059507],[35.556432,129.059387],[35.556351,129.05926],[35.556263,129.059104],[35.556207,129.058951],[35.556147,129.058765],[35.556023,129.05853],[35.555998,129.058378],[35.555875,129.058063],[35.555799,129.057942],[35.555685,129.057763],[35.555627,129.057602],[35.555544,129.057434],[35.555415,129.057169],[35.555332,129.056899],[35.555283,129.056595],[35.555199,129.05624],[35.555163,129.05598],[35.555137,129.055679],[35.555074,129.055418],[35.555028,129.055177],[35.554988,129.054909],[35.554947,129.054654],[35.554923,129.054477],[35.554882,129.054253],[35.554847,129.054042],[35.554773,129.05377],[35.554697,129.053473],[35.554639,129.053163],[35.554474,129.052935],[35.554349,129.05285],[35.554193,129.05276],[35.554028,129.052681],[35.553867,129.052581],[35.553747,129.052501],[35.553608,129.052436],[35.553463,129.052223],[35.553328,129.052109],[35.553252,129.051931],[35.553192,129.051756],[35.553116,129.051462],[35.552997,129.051178],[35.552929,129.050911],[35.55289,129.050701],[35.552849,129.050463],[35.552716,129.050184],[35.552512,129.049974],[35.552394,129.049762],[35.552303,129.049602],[35.552238,129.049433],[35.552097,129.049355],[35.552086,129.049192],[35.552038,129.049102],[35.551917,129.048934],[35.551783,129.048743],[35.551669,129.048561],[35.551573,129.048415],[35.551487,129.04828],[35.551429,129.048138],[35.551375,129.048002],[35.551317,129.047932],[35.551259,129.047754],[35.551181,129.047564],[35.551123,129.047279],[35.551079,129.046974],[35.551032,129.046692],[35.550991,129.04644],[35.550955,129.046169],[35.550916,129.045939],[35.550809,129.045631],[35.550745,129.045395],[35.550645,129.045185],[35.550547,129.045007],[35.550418,129.044901],[35.550328,129.044789],[35.550221,129.044681],[35.550194,129.044835],[35.550157,129.044892],[35.550065,129.044969],[35.549998,129.045073],[35.549923,129.045126],[35.549802,129.045076],[35.549679,129.045031],[35.549529,129.045008],[35.549427,129.045003],[35.549344,129.045017],[35.549174,129.04482],[35.549075,129.044809],[35.548968,129.044826],[35.54895,129.044842],[35.548911,129.04491],[35.548851,129.045005],[35.548749,129.044986],[35.54872,129.044996],[35.548657,129.044975],[35.548613,129.044949],[35.548566,129.044898],[35.548522,129.044867],[35.548452,129.044862],[35.548389,129.044844],[35.548302,129.044795],[35.548246,129.044813],[35.548177,129.044869],[35.548072,129.044963],[35.547939,129.045078],[35.547931,129.04515],[35.547783,129.04524],[35.547593,129.045315],[35.547436,129.045371],[35.547266,129.045433],[35.547108,129.045484],[35.546895,129.045562],[35.54674,129.04553],[35.546621,129.045629],[35.546493,129.045717],[35.546384,129.045805],[35.546317,129.045883],[35.546106,129.04596],[35.546002,129.045972],[35.545832,129.046031],[35.545744,129.046078],[35.545572,129.046107],[35.545409,129.04613],[35.545222,129.046153],[35.545227,129.046236],[35.545161,129.046325],[35.545015,129.046302],[35.544948,129.046482],[35.544898,129.04666],[35.544766,129.046723],[35.544688,129.046834],[35.544671,129.047051],[35.544611,129.047235],[35.544459,129.047192],[35.544376,129.047176],[35.544199,129.04723],[35.544099,129.047412],[35.544032,129.047628],[35.543879,129.04774],[35.543844,129.047816],[35.543745,129.047948],[35.543642,129.048037],[35.543535,129.048147],[35.543436,129.048238],[35.543333,129.048335],[35.543315,129.048367],[35.543094,129.048356],[35.542946,129.048339],[35.542705,129.048322],[35.542565,129.048219],[35.54236,129.048175],[35.5422,129.048185],[35.542065,129.048192],[35.541915,129.048169],[35.541748,129.048162],[35.541575,129.048155],[35.541421,129.048154],[35.541252,129.048169],[35.541121,129.048188],[35.540986,129.048206],[35.540855,129.048233],[35.540755,129.048261],[35.540557,129.04825],[35.540439,129.048292],[35.540312,129.048343],[35.540219,129.048509],[35.540176,129.048679],[35.540167,129.048784],[35.540146,129.048951],[35.540117,129.049069],[35.540074,129.049228],[35.540059,129.049467],[35.540024,129.049676],[35.53999,129.049785],[35.539969,129.049953],[35.539956,129.050068],[35.539957,129.050291],[35.539949,129.05047],[35.539886,129.050742],[35.539879,129.051012],[35.539829,129.051294],[35.539804,129.051451],[35.539803,129.051682],[35.539792,129.051919],[35.539788,129.052137],[35.539781,129.052302],[35.539749,129.052549],[35.53971,129.052768],[35.539681,129.05301],[35.539652,129.053216],[35.539629,129.053398],[35.539606,129.053543],[35.53956,129.053732],[35.53951,129.053915],[35.539359,129.054041],[35.5395,129.05394],[35.539499,129.05402],[35.539495,129.054144],[35.539484,129.054405],[35.539472,129.054579],[35.539461,129.054796],[35.539502,129.055015],[35.539543,129.055267],[35.539588,129.055519],[35.539632,129.055729],[35.539672,129.055896],[35.539729,129.056107],[35.539805,129.056437],[35.539866,129.056689],[35.539925,129.056922],[35.539982,129.057155],[35.54005,129.057402],[35.540113,129.057663],[35.540164,129.057857],[35.540201,129.058023],[35.54025,129.058223],[35.540281,129.058367],[35.54032,129.058481],[35.540385,129.058623],[35.540472,129.058799],[35.540563,129.058978],[35.540659,129.05916],[35.540779,129.059394],[35.540899,129.059623],[35.540995,129.059805],[35.541109,129.060028],[35.5412,129.060204],[35.541368,129.06041],[35.541503,129.060579],[35.541664,129.060776],[35.541798,129.060953],[35.541902,129.061077],[35.542091,129.061206],[35.542261,129.061306],[35.542437,129.061416],[35.542633,129.061536],[35.542811,129.06164],[35.542998,129.061758],[35.543251,129.061737],[35.543468,129.061712],[35.543716,129.061691],[35.543935,129.061672],[35.544179,129.061634],[35.544368,129.061608],[35.544529,129.061579],[35.544764,129.061657],[35.544934,129.061719],[35.545085,129.061762],[35.545298,129.061913],[35.545487,129.062045],[35.545657,129.062165],[35.545861,129.062311],[35.545993,129.062394],[35.546084,129.062457],[35.54625,129.062533],[35.546446,129.062629],[35.546681,129.062726],[35.546864,129.062709],[35.547065,129.062689],[35.547232,129.062669],[35.54747,129.062562],[35.547731,129.062442],[35.547978,129.062362],[35.548141,129.062322],[35.548403,129.062299],[35.548646,129.062286],[35.548892,129.062265],[35.549118,129.062257],[35.54935,129.062238],[35.549515,129.06222],[35.549752,129.062154],[35.54999,129.062075],[35.550174,129.062024],[35.550421,129.061898],[35.55059,129.061795],[35.550774,129.061698],[35.550902,129.06161],[35.551141,129.061542],[35.551352,129.061467],[35.551561,129.061393],[35.551749,129.061343],[35.551934,129.061278],[35.552166,129.061306],[35.552357,129.061317],[35.55249,129.061326],[35.552733,129.06134],[35.552903,129.061535],[35.553058,129.061715],[35.553199,129.061868],[35.553385,129.062074],[35.553474,129.062296],[35.553562,129.06253],[35.553659,129.062767],[35.553733,129.062954],[35.553834,129.06321],[35.554005,129.063396],[35.554164,129.063585],[35.554332,129.063768],[35.554535,129.064008],[35.554696,129.064186],[35.55488,129.064392],[35.555005,129.064596],[35.555139,129.064787],[35.555264,129.064986],[35.555364,129.065151],[35.555468,129.0653],[35.555607,129.065447],[35.555738,129.065574],[35.555864,129.065688],[35.555968,129.065798],[35.556099,129.065917],[35.556181,129.065999],[35.556269,129.066021],[35.556308,129.065956],[35.556386,129.065991],[35.556427,129.066091],[35.556464,129.066177],[35.556506,129.066236],[35.556598,129.06628],[35.556693,129.066343],[35.556773,129.066439],[35.55683,129.066526],[35.556844,129.066648]
+  ],
+  // 제2코스 실제 GPS 1133포인트
+  1:[
+  [35.52588,129.023555],[35.525745,129.023452],[35.525762,129.023604],[35.525761,129.023665],[35.525761,129.023825],[35.525772,129.023946],[35.525802,129.024057],[35.525852,129.02415],
+  [35.525921,129.024239],[35.525958,129.024295],[35.525957,129.024364],[35.52596,129.024444],[35.525952,129.024494],[35.526007,129.024603],[35.526143,129.02484],[35.526303,129.025054],
+  [35.526411,129.0252],[35.526572,129.025446],[35.52669,129.025648],[35.526801,129.025849],[35.526873,129.025999],[35.526944,129.026067],[35.527101,129.026143],[35.527239,129.026221],
+  [35.527315,129.026228],[35.527533,129.026179],[35.527682,129.026149],[35.527794,129.026182],[35.527926,129.026244],[35.528125,129.026326],[35.528312,129.026331],[35.528431,129.026325],
+  [35.528504,129.026308],[35.528584,129.026246],[35.528628,129.026146],[35.528663,129.026075],[35.528716,129.026021],[35.528881,129.025962],[35.529022,129.025921],[35.529105,129.025912],
+  [35.529213,129.025912],[35.529329,129.025882],[35.529426,129.025838],[35.529601,129.02574],[35.52972,129.025674],[35.529831,129.025638],[35.529923,129.025632],[35.530074,129.025634],
+  [35.530209,129.02564],[35.530299,129.025634],[35.530381,129.025616],[35.530471,129.025575],[35.530558,129.025541],[35.530661,129.025535],[35.530767,129.025546],[35.530874,129.025585],
+  [35.530973,129.025642],[35.531057,129.025713],[35.531148,129.025785],[35.531273,129.025843],[35.531377,129.025865],[35.531471,129.025873],[35.531598,129.025856],[35.531717,129.025862],
+  [35.531852,129.025882],[35.531986,129.025919],[35.532145,129.025964],[35.532311,129.026007],[35.532453,129.026043],[35.532643,129.026089],[35.532814,129.02613],[35.532958,129.026164],
+  [35.533032,129.026165],[35.533105,129.02612],[35.533188,129.025998],[35.533228,129.025914],[35.533385,129.025957],[35.533516,129.025781],[35.533629,129.025632],[35.533765,129.025459],
+  [35.533837,129.025337],[35.533704,129.025154],[35.533576,129.025002],[35.533523,129.024844],[35.533523,129.024709],[35.533597,129.024592],[35.533692,129.024584],[35.533858,129.024585],
+  [35.534032,129.024559],[35.534114,129.02452],[35.534151,129.024468],[35.534262,129.024402],[35.534336,129.024319],[35.534386,129.024254],[35.534466,129.024206],[35.534576,129.024247],
+  [35.534655,129.024244],[35.534737,129.024199],[35.534803,129.024143],[35.534881,129.024021],[35.53498,129.02393],[35.535138,129.023776],[35.535214,129.023696],[35.535295,129.023656],
+  [35.535429,129.023618],[35.535527,129.023513],[35.535611,129.023477],[35.535692,129.023512],[35.535795,129.023548],[35.535883,129.023566],[35.535968,129.023558],[35.536066,129.023486],
+  [35.536253,129.023369],[35.536385,129.02329],[35.536494,129.023246],[35.536625,129.023213],[35.536741,129.023131],[35.536907,129.023052],[35.537087,129.022971],[35.537277,129.022877],
+  [35.537395,129.022822],[35.53757,129.022782],[35.537701,129.022749],[35.537776,129.022693],[35.537887,129.02268],[35.537977,129.022649],[35.538077,129.022627],[35.538192,129.022632],
+  [35.538324,129.022638],[35.538485,129.022571],[35.538656,129.022487],[35.538781,129.022413],[35.538863,129.022371],[35.53905,129.022353],[35.539221,129.022355],[35.539319,129.022313],
+  [35.539381,129.022257],[35.539424,129.0222],[35.539502,129.022158],[35.53959,129.022135],[35.53967,129.022082],[35.539722,129.022031],[35.539818,129.021987],[35.539906,129.02197],
+  [35.54005,129.021971],[35.540208,129.021961],[35.540382,129.021946],[35.54065,129.021919],[35.540865,129.021884],[35.541011,129.021865],[35.54116,129.021872],[35.541314,129.021848],
+  [35.541575,129.021835],[35.541796,129.021816],[35.541952,129.021814],[35.542075,129.021845],[35.542198,129.021922],[35.542335,129.022033],[35.542504,129.022178],[35.542738,129.022366],
+  [35.542865,129.022455],[35.54294,129.022523],[35.543019,129.022533],[35.543235,129.022651],[35.543441,129.022756],[35.543613,129.022854],[35.543861,129.023114],[35.543889,129.023167],
+  [35.543977,129.023307],[35.54417,129.023496],[35.5443,129.023615],[35.544498,129.023783],[35.544632,129.023886],[35.544814,129.024044],[35.544954,129.024241],[35.544987,129.024305],
+  [35.545028,129.02445],[35.545054,129.024649],[35.545075,129.024823],[35.545088,129.024997],[35.545097,129.025129],[35.545127,129.025224],[35.545167,129.025277],[35.545239,129.025276],
+  [35.545265,129.025175],[35.545278,129.024949],[35.54529,129.024759],[35.54532,129.024498],[35.545288,129.024398],[35.545269,129.024298],[35.545256,129.024119],[35.545196,129.023814],
+  [35.54514,129.023667],[35.545071,129.023483],[35.545027,129.023383],[35.544975,129.023313],[35.5449,129.023181],[35.544835,129.023039],[35.544776,129.022916],[35.54469,129.02284],
+  [35.544621,129.022791],[35.544579,129.022749],[35.544545,129.022712],[35.544519,129.022678],[35.544493,129.022603],[35.544472,129.022531],[35.544442,129.022428],[35.544401,129.022333],
+  [35.544345,129.022291],[35.544269,129.022247],[35.5442,129.022196],[35.544154,129.022123],[35.544107,129.022012],[35.544069,129.021947],[35.544037,129.021883],[35.54397,129.021813],
+  [35.54389,129.021775],[35.543828,129.021715],[35.543775,129.021648],[35.543896,129.021659],[35.543988,129.021681],[35.544071,129.021686],[35.544143,129.02174],[35.544208,129.021857],
+  [35.544274,129.02195],[35.544366,129.022002],[35.544521,129.022011],[35.544595,129.022035],[35.544666,129.022089],[35.544719,129.022148],[35.544754,129.022215],[35.544804,129.022319],
+  [35.544908,129.022338],[35.545013,129.022354],[35.545087,129.022389],[35.545128,129.022467],[35.545172,129.022582],[35.545271,129.022705],[35.545358,129.022732],[35.545473,129.022727],
+  [35.545551,129.022685],[35.545664,129.022657],[35.545783,129.022671],[35.545859,129.02272],[35.545891,129.022779],[35.545893,129.022845],[35.5459,129.022942],[35.545919,129.023022],
+  [35.545963,129.023095],[35.54613,129.023198],[35.546215,129.02325],[35.546245,129.023317],[35.546241,129.023444],[35.546234,129.023567],[35.546235,129.023636],[35.546218,129.023713],
+  [35.546233,129.023788],[35.546274,129.023888],[35.546367,129.023948],[35.54652,129.024002],[35.546643,129.024066],[35.546742,129.024165],[35.546795,129.024268],[35.546833,129.024365],
+  [35.546887,129.024532],[35.546906,129.024635],[35.546917,129.024748],[35.546911,129.024828],[35.546892,129.024929],[35.546827,129.025024],[35.546797,129.025062],[35.546781,129.025095],
+  [35.546786,129.025166],[35.546805,129.02523],[35.546852,129.025303],[35.547021,129.025398],[35.547141,129.025498],[35.547283,129.025625],[35.547465,129.025779],[35.547658,129.025955],
+  [35.547749,129.026037],[35.54784,129.026147],[35.547881,129.026222],[35.547892,129.026283],[35.547886,129.026349],[35.547855,129.026453],[35.547816,129.026507],[35.54777,129.026558],
+  [35.547697,129.02662],[35.547608,129.026689],[35.547535,129.026751],[35.547418,129.026864],[35.547385,129.026915],[35.547373,129.02697],[35.547381,129.027056],[35.547384,129.027144],
+  [35.547411,129.027255],[35.547441,129.027385],[35.547457,129.027496],[35.547465,129.027562],[35.547463,129.027661],[35.547444,129.027741],[35.54742,129.027806],[35.54735,129.027932],
+  [35.547323,129.028055],[35.547356,129.028152],[35.547383,129.028233],[35.547415,129.028347],[35.547419,129.028416],[35.547402,129.028501],[35.547373,129.028574],[35.547329,129.028656],
+  [35.547294,129.028724],[35.547275,129.028784],[35.547271,129.028869],[35.547265,129.028991],[35.547248,129.029164],[35.547228,129.029428],[35.547218,129.029494],[35.547201,129.029573],
+  [35.547208,129.029667],[35.547239,129.029742],[35.547318,129.02983],[35.547383,129.029895],[35.547426,129.029962],[35.547423,129.030017],[35.547411,129.030064],[35.547339,129.030216],
+  [35.547347,129.030274],[35.547382,129.030355],[35.547465,129.030459],[35.547576,129.030603],[35.547753,129.030764],[35.547866,129.030866],[35.547948,129.03094],[35.54799,129.031002],
+  [35.548005,129.031063],[35.547988,129.031107],[35.547961,129.031133],[35.547918,129.031154],[35.547803,129.031163],[35.547694,129.031171],[35.547631,129.031194],[35.547579,129.031229],
+  [35.547542,129.031258],[35.5475,129.031334],[35.547481,129.031414],[35.547463,129.031515],[35.547448,129.031636],[35.547436,129.031688],[35.547412,129.031767],[35.547359,129.031849],
+  [35.547303,129.031913],[35.547267,129.031962],[35.547241,129.032017],[35.547233,129.032066],[35.547218,129.032176],[35.547207,129.032267],[35.547189,129.032412],[35.547186,129.032495],
+  [35.547166,129.032594],[35.547152,129.032635],[35.547108,129.032708],[35.547057,129.032776],[35.547059,129.032916],[35.547059,129.033057],[35.547038,129.033246],[35.547033,129.03342],
+  [35.547016,129.03361],[35.547013,129.033905],[35.547011,129.034155],[35.547005,129.034409],[35.547009,129.034541],[35.547015,129.034602],[35.547035,129.034727],[35.547058,129.03487],
+  [35.547064,129.035011],[35.547031,129.03525],[35.547009,129.035459],[35.54698,129.035737],[35.546976,129.036087],[35.546975,129.036415],[35.546974,129.036605],[35.546969,129.036806],
+  [35.546995,129.036958],[35.54703,129.037042],[35.547082,129.037165],[35.547132,129.037276],[35.547201,129.037443],[35.547231,129.037554],[35.547248,129.037717],[35.547242,129.037805],
+  [35.547234,129.037896],[35.547192,129.037991],[35.547139,129.038048],[35.547064,129.038121],[35.547015,129.038166],[35.546987,129.038226],[35.54695,129.038322],[35.546927,129.038362],
+  [35.546881,129.038383],[35.546798,129.038376],[35.546764,129.038375],[35.546716,129.038401],[35.546696,129.038423],[35.546681,129.038466],[35.546663,129.038518],[35.546661,129.038598],
+  [35.54666,129.038689],[35.546653,129.038816],[35.546637,129.038986],[35.54662,129.039151],[35.546602,129.039278],[35.546589,129.039388],[35.546572,129.039486],[35.546557,129.039549],
+  [35.546531,129.039651],[35.546485,129.039812],[35.546432,129.040004],[35.546412,129.040304],[35.546382,129.040568],[35.546357,129.040732],[35.546334,129.040897],[35.546316,129.041018],
+  [35.546303,129.041155],[35.54629,129.041232],[35.5463,129.041329],[35.546343,129.041451],[35.546387,129.041615],[35.546388,129.04169],[35.546387,129.041775],[35.546382,129.041891],
+  [35.546396,129.042023],[35.546425,129.0422],[35.546458,129.042358],[35.546503,129.042511],[35.546547,129.042576],[35.546627,129.042633],[35.546722,129.042696],[35.546794,129.042758],
+  [35.546837,129.042845],[35.546845,129.042922],[35.546837,129.042991],[35.546816,129.043029],[35.546793,129.043067],[35.546622,129.043179],[35.546476,129.043277],[35.546349,129.043359],
+  [35.546203,129.04343],[35.546085,129.043476],[35.545956,129.043517],[35.545886,129.043557],[35.545844,129.0436],[35.545807,129.043651],[35.545926,129.043723],[35.546084,129.043796],
+  [35.546243,129.043899],[35.546381,129.043983],[35.546555,129.044089],[35.546708,129.044192],[35.54684,129.044273],[35.546947,129.044314],[35.5471,129.044368],[35.547288,129.044397],
+  [35.547531,129.044412],[35.547685,129.04441],[35.54778,129.044379],[35.547916,129.044308],[35.547907,129.044452],[35.5479,129.0446],[35.547897,129.044796],[35.547903,129.044937],
+  [35.547927,129.045144],[35.547786,129.045234],[35.547636,129.045296],[35.547461,129.045366],[35.547284,129.045425],[35.547101,129.045484],[35.546895,129.045559],[35.546742,129.045536],
+  [35.546569,129.045663],[35.546443,129.045757],[35.546386,129.045813],[35.546315,129.045886],[35.546165,129.045937],[35.546095,129.045955],[35.545998,129.045983],[35.545814,129.046041],
+  [35.545735,129.046083],[35.545599,129.046099],[35.545464,129.046123],[35.545233,129.046151],[35.545232,129.046239],[35.545163,129.046322],[35.545012,129.046302],[35.544944,129.046482],
+  [35.5449,129.046666],[35.544775,129.046732],[35.54469,129.046829],[35.544673,129.047046],[35.544607,129.047237],[35.544472,129.047195],[35.544389,129.047176],[35.544346,129.047189],
+  [35.54429,129.047204],[35.544195,129.047229],[35.544097,129.047425],[35.544032,129.047636],[35.543889,129.047732],[35.543849,129.047819],[35.543738,129.047959],[35.543633,129.048053],
+  [35.543516,129.048169],[35.543422,129.048252],[35.543326,129.04834],[35.543308,129.048373],[35.543056,129.04835],[35.542903,129.048335],[35.542712,129.048322],[35.542567,129.048222],
+  [35.54236,129.048183],[35.542191,129.048187],[35.542056,129.048189],[35.541917,129.048175],[35.541719,129.048167],[35.541541,129.048162],[35.541415,129.048159],[35.541259,129.048172],
+  [35.541053,129.048197],[35.540916,129.048224],[35.540757,129.048258],[35.540552,129.04825],[35.540425,129.048305],[35.540308,129.048343],[35.540217,129.048501],[35.540173,129.048684],
+  [35.540169,129.048797],[35.540136,129.049023],[35.540078,129.049239],[35.540059,129.049462],[35.540017,129.049684],[35.539985,129.049799],[35.539961,129.050063],[35.539955,129.05028],
+  [35.539949,129.050468],[35.539891,129.050742],[35.539877,129.051017],[35.539837,129.051247],[35.539802,129.051456],[35.539809,129.051713],[35.539791,129.051988],[35.539778,129.052307],
+  [35.53973,129.05265],[35.539699,129.052892],[35.539665,129.053142],[35.539639,129.053321],[35.539608,129.053568],[35.539558,129.053746],[35.539512,129.053921],[35.539343,129.054057],
+  [35.539505,129.053915],[35.539551,129.053776],[35.539606,129.053573],[35.539637,129.053343],[35.539678,129.053068],[35.539709,129.052815],[35.53975,129.052521],[35.539784,129.052244],
+  [35.539792,129.052024],[35.53981,129.051746],[35.539803,129.05155],[35.539804,129.05144],[35.539872,129.051064],[35.539886,129.050899],[35.53989,129.050755],[35.539945,129.050481],
+  [35.53996,129.050129],[35.539977,129.049895],[35.539988,129.049788],[35.540017,129.049684],[35.540061,129.049453],[35.540076,129.049261],[35.540122,129.049053],[35.540162,129.048836],
+  [35.540173,129.048718],[35.54021,129.048539],[35.540284,129.048381],[35.540414,129.048302],[35.540543,129.048253],[35.540715,129.048249],[35.54087,129.048234],[35.541026,129.048199],
+  [35.541232,129.048179],[35.541387,129.048164],[35.541529,129.048162],[35.541692,129.048166],[35.541845,129.04817],[35.542038,129.048183],[35.542167,129.048181],[35.54236,129.048178],
+  [35.542558,129.048221],[35.542712,129.048319],[35.542885,129.04834],[35.543171,129.048361],[35.54331,129.048373],[35.543365,129.048303],[35.543475,129.048203],[35.54358,129.048104],
+  [35.543715,129.047981],[35.543837,129.047835],[35.543889,129.047729],[35.544025,129.047636],[35.544094,129.047436],[35.544194,129.047235],[35.544374,129.047168],[35.544598,129.047229],
+  [35.544675,129.047057],[35.544692,129.046834],[35.544766,129.046731],[35.544893,129.046666],[35.544944,129.046477],[35.545008,129.04631],[35.545158,129.046317],[35.545227,129.046241],
+  [35.54522,129.04615],[35.545452,129.046123],[35.545723,129.04608],[35.545819,129.04603],[35.545993,129.04598],[35.546256,129.045909],[35.546438,129.045762],[35.546605,129.045631],
+  [35.54674,129.045533],[35.54689,129.045553],[35.547212,129.045446],[35.547398,129.045381],[35.547586,129.045314],[35.547736,129.045252],[35.547929,129.045147],[35.547904,129.044909],
+  [35.547901,129.044686],[35.547912,129.044534],[35.547914,129.044314],[35.547778,129.044379],[35.547649,129.044404],[35.547428,129.044404],[35.547219,129.044382],[35.547055,129.04435],
+  [35.546807,129.04425],[35.546659,129.044161],[35.546488,129.044046],[35.546334,129.043954],[35.546202,129.043874],[35.54604,129.043773],[35.545903,129.043703],[35.545805,129.043651],
+  [35.545874,129.043559],[35.546056,129.043478],[35.546203,129.043427],[35.546351,129.043356],[35.546572,129.043213],[35.546793,129.043067],[35.54683,129.043013],[35.546849,129.042933],
+  [35.546833,129.042834],[35.546789,129.042753],[35.546696,129.042684],[35.546613,129.042624],[35.546553,129.042581],[35.54651,129.042498],[35.546473,129.042397],[35.54645,129.042281],
+  [35.546417,129.042131],[35.546392,129.041982],[35.546383,129.041885],[35.546382,129.041761],[35.546394,129.041626],[35.546357,129.041501],[35.546308,129.041349],[35.54629,129.041238],
+  [35.546305,129.04115],[35.546324,129.040977],[35.546356,129.040763],[35.546377,129.040631],[35.546403,129.040408],[35.54642,129.040205],[35.546435,129.039996],[35.546495,129.039774],
+  [35.546552,129.039596],[35.546572,129.039497],[35.546596,129.039371],[35.54661,129.039231],[35.546631,129.03903],[35.546645,129.038901],[35.546658,129.038758],[35.546662,129.038659],
+  [35.546664,129.038568],[35.546672,129.038505],[35.546691,129.038442],[35.546746,129.038377],[35.546899,129.03837],[35.546959,129.038303],[35.546992,129.038212],[35.547036,129.038145],
+  [35.547116,129.038078],[35.547199,129.037983],[35.547236,129.037899],[35.547245,129.037789],[35.547245,129.037673],[35.547241,129.037588],[35.547231,129.037532],[35.547205,129.037463],
+  [35.547193,129.037399],[35.547126,129.037243],[35.547076,129.037134],[35.547024,129.037011],[35.546989,129.03692],[35.546973,129.036787],[35.546982,129.036547],[35.546981,129.036357],
+  [35.546983,129.036206],[35.546982,129.036029],[35.546983,129.035839],[35.546987,129.035693],[35.546999,129.035531],[35.54701,129.035421],[35.547026,129.03528],[35.547036,129.035206],
+  [35.547066,129.035014],[35.547057,129.034879],[35.547039,129.034752],[35.547011,129.034558],[35.54701,129.034354],[35.547012,129.034098],[35.547019,129.033808],[35.547018,129.033613],
+  [35.547033,129.033414],[35.547045,129.033236],[35.547061,129.033062],[35.547054,129.03293],[35.547059,129.032787],[35.547122,129.032683],[35.547163,129.03261],[35.547178,129.032547],
+  [35.547189,129.032437],[35.547197,129.03236],[35.547212,129.03225],[35.547223,129.032148],[35.547235,129.032072],[35.54725,129.031995],[35.54729,129.031932],[35.547343,129.031868],
+  [35.547386,129.031805],[35.547426,129.031737],[35.547443,129.031661],[35.547458,129.031581],[35.547468,129.031504],[35.547483,129.031422],[35.547498,129.031348],[35.547524,129.031282],
+  [35.547581,129.031226],[35.547656,129.031175],[35.5478,129.031162],[35.547927,129.031149],[35.548,129.031096],[35.548008,129.03103],[35.547968,129.030963],[35.54792,129.030915],
+  [35.54782,129.030813],[35.547713,129.030725],[35.547571,129.030589],[35.547452,129.030431],[35.547388,129.030361],[35.547353,129.030288],[35.547343,129.030233],[35.547358,129.030167],
+  [35.547388,129.030113],[35.547412,129.030039],[35.547426,129.029982],[35.547411,129.029937],[35.547363,129.029875],[35.547303,129.029807],[35.547232,129.02972],[35.547206,129.029667],
+  [35.547205,129.029612],[35.547213,129.029532],[35.547221,129.029458],[35.547236,129.029348],[35.547242,129.029263],[35.547254,129.029128],[35.547266,129.029029],[35.547268,129.028947],
+  [35.547276,129.02885],[35.547282,129.028754],[35.547318,129.028672],[35.547355,129.02861],[35.547385,129.028539],[35.547409,129.028468],[35.547417,129.02836],[35.547386,129.028238],
+  [35.547349,129.028119],[35.547323,129.02806],[35.547348,129.027937],[35.547411,129.02782],[35.547448,129.027747],[35.547463,129.027648],[35.547465,129.02754],[35.547451,129.027454],
+  [35.547436,129.027374],[35.547413,129.027272],[35.547388,129.027158],[35.547379,129.027056],[35.547375,129.026976],[35.547383,129.026912],[35.547422,129.026858],[35.547569,129.026716],
+  [35.547717,129.026601],[35.547818,129.026504],[35.547867,129.02642],[35.547886,129.026327],[35.547888,129.02625],[35.547862,129.026177],[35.547802,129.026102],[35.54763,129.025924],
+  [35.547532,129.025841],[35.547403,129.025719],[35.547257,129.025589],[35.547139,129.025487],[35.547021,129.02539],[35.546941,129.025347],[35.546865,129.025312],[35.546821,129.025258],
+  [35.546795,129.025186],[35.54678,129.025119],[35.546797,129.025062],[35.546832,129.024997],[35.546889,129.024924],[35.546906,129.024858],[35.546913,129.024737],[35.546899,129.024618],
+  [35.546872,129.024499],[35.546836,129.024365],[35.546777,129.024234],[35.546705,129.024131],[35.546611,129.024054],[35.546477,129.023979],[35.546358,129.023943],[35.546276,129.023883],
+  [35.54623,129.023785],[35.546211,129.02373],[35.54624,129.023642],[35.546241,129.023548],[35.546248,129.023433],[35.546243,129.023317],[35.54621,129.023255],[35.546083,129.023167],
+  [35.545965,129.0231],[35.54593,129.023039],[35.545904,129.022945],[35.545899,129.022856],[35.545889,129.022779],[35.545861,129.02272],[35.545785,129.022669],[35.54576,129.022662],
+  [35.545662,129.022652],[35.545551,129.022688],[35.545469,129.022727],[35.545356,129.022732],[35.545271,129.022703],[35.54518,129.022604],[35.54515,129.02252],[35.545115,129.022448],
+  [35.545085,129.022386],[35.545006,129.022351],[35.544908,129.022341],[35.544802,129.022316],[35.54475,129.022207],[35.544695,129.02212],[35.544657,129.022086],[35.544631,129.022061],
+  [35.544533,129.022],[35.544478,129.022005],[35.544469,129.022007],[35.544366,129.022004],[35.544274,129.02195],[35.544213,129.021863],[35.544149,129.021765],[35.54408,129.021694],
+  [35.543892,129.021659],[35.543775,129.021648],[35.543867,129.02176],[35.543966,129.02181],[35.544036,129.021894],[35.544093,129.021992],[35.54413,129.022084],[35.544183,129.022165],
+  [35.544263,129.02225],[35.544356,129.022299],[35.54442,129.022375],[35.544485,129.022564],[35.544504,129.022634],[35.544541,129.022712],[35.544656,129.022822],[35.544752,129.022899],
+  [35.544811,129.022994],[35.544856,129.0231],[35.544928,129.02324],[35.544983,129.023318],[35.545038,129.023408],[35.545095,129.023544],[35.545155,129.023717],[35.5452,129.023817],
+  [35.545213,129.023897],[35.545231,129.024003],[35.545252,129.024113],[35.545257,129.024188],[35.545267,129.024276],[35.545292,129.024404],[35.545322,129.024515],[35.545311,129.024614],
+  [35.545292,129.024801],[35.545286,129.024919],[35.545276,129.025109],[35.545265,129.025219],[35.545244,129.025246],[35.545174,129.025272],[35.545123,129.025226],[35.545099,129.025138],
+  [35.545092,129.025058],[35.545085,129.024925],[35.545065,129.024745],[35.545048,129.024577],[35.545026,129.02443],[35.544996,129.02433],[35.544926,129.024207],[35.544838,129.024084],
+  [35.54478,129.024022],[35.544683,129.023925],[35.544574,129.023843],[35.544491,129.023777],[35.544411,129.023712],[35.544287,129.023604],[35.544147,129.023474],[35.544061,129.023389],
+  [35.543986,129.023313],[35.543933,129.02324],[35.543858,129.023119],[35.543754,129.023001],[35.543703,129.022947],[35.543566,129.022828],[35.543385,129.022721],[35.543202,129.022637],
+  [35.543115,129.022591],[35.543021,129.022528],[35.542936,129.02252],[35.542693,129.022326],[35.542453,129.02213],[35.542309,129.022008],[35.542182,129.021914],[35.54207,129.02185],
+  [35.541927,129.021816],[35.541731,129.021823],[35.541537,129.021837],[35.541275,129.021855],[35.541149,129.021871],[35.541009,129.021868],[35.540829,129.021891],[35.540612,129.021919],
+  [35.540499,129.021935],[35.540307,129.021958],[35.540169,129.021971],[35.540027,129.02197],[35.540005,129.021975],[35.539908,129.021978],[35.539811,129.021989],[35.53972,129.022037],
+  [35.539656,129.022093],[35.539601,129.02213],[35.539508,129.022161],[35.539422,129.022206],[35.539362,129.022273],[35.539303,129.022318],[35.539219,129.02236],[35.539048,129.022356],
+  [35.538967,129.022365],[35.538863,129.022371],[35.538742,129.022442],[35.538617,129.022511],[35.538463,129.022584],[35.538322,129.022638],[35.538183,129.022632],[35.538068,129.022637],
+  [35.53797,129.022657],[35.53788,129.022688],[35.537783,129.022691],[35.537696,129.022752],[35.537538,129.022789],[35.537373,129.022838],[35.537225,129.022908],[35.537043,129.022992],
+  [35.536859,129.023081],[35.536739,129.023133],[35.536621,129.023213],[35.536476,129.023253],[35.536358,129.0233],[35.536157,129.02343],[35.536053,129.023499],[35.535964,129.023557],
+  [35.53588,129.023566],[35.535781,129.023547],[35.535692,129.023515],[35.535614,129.023483],[35.535562,129.023492],[35.535516,129.02353],[35.535431,129.023616],[35.535384,129.023631],
+  [35.535293,129.023656],[35.535204,129.023715],[35.535122,129.023798],[35.535035,129.023887],[35.534943,129.023967],[35.534877,129.024032],[35.5348,129.024151],[35.534734,129.024205],
+  [35.534655,129.024247],[35.534573,129.024247],[35.534466,129.024209],[35.534384,129.024254],[35.53432,129.024335],[35.534265,129.024391],[35.534151,129.02446],[35.534107,129.024522],
+  [35.534025,129.024564],[35.533964,129.024563],[35.533849,129.02459],[35.533795,129.024589],[35.533694,129.024584],[35.533592,129.024592],[35.533525,129.024706],[35.533524,129.024794],
+  [35.533529,129.024858],[35.533555,129.024933],[35.533598,129.025028],[35.53368,129.025129],[35.533753,129.02523],[35.533828,129.025337],[35.533792,129.025418],[35.533705,129.025537],
+  [35.533587,129.025697],[35.533463,129.025862],[35.533378,129.025962],[35.533227,129.025922],[35.533181,129.026007],[35.533098,129.026123],[35.533055,129.026152],[35.532958,129.026155],
+  [35.532915,129.026146],[35.53276,129.026114],[35.532619,129.026083],[35.532426,129.026029],[35.532258,129.025986],[35.532101,129.025949],[35.531955,129.025904],[35.531809,129.02587],
+  [35.531697,129.025856],[35.53157,129.025859],[35.531467,129.025867],[35.53137,129.025865],[35.531251,129.025831],[35.531126,129.025767],[35.531028,129.025691],[35.530959,129.025639],
+  [35.530868,129.025585],[35.530753,129.025546],[35.530659,129.025524],[35.530551,129.025535],[35.530453,129.025571],[35.53039,129.025603],[35.530306,129.025631],[35.530171,129.025639],
+  [35.53004,129.025635],[35.529923,129.025627],[35.529833,129.025633],[35.529715,129.025677],[35.529579,129.025751],[35.529513,129.02579],[35.529415,129.025835],[35.529308,129.025882],
+  [35.529213,129.025907],[35.529028,129.025916],[35.528978,129.025934],[35.528843,129.025977],[35.528732,129.026013],[35.528677,129.026067],[35.528619,129.026162],[35.528574,129.026254],
+  [35.528513,129.026297],[35.528409,129.026325],[35.528251,129.026329],[35.528118,129.026326],[35.527886,129.026221],[35.527783,129.026174],[35.527684,129.026144],[35.52763,129.026162],
+  [35.527517,129.026184],[35.527422,129.026203],[35.527237,129.026224],[35.527083,129.026129],[35.52694,129.026067],[35.526873,129.025999],[35.526825,129.025907],[35.526756,129.025765],
+  [35.526648,129.025583],[35.526508,129.025351],[35.526372,129.025149],[35.526275,129.025014],[35.5262,129.024913],[35.526097,129.024759],[35.526003,129.024583],[35.525952,129.024502],
+  [35.52596,129.024433],[35.525957,129.024329],[35.525949,129.024287],[35.52591,129.024223],[35.525843,129.024144],[35.525802,129.024038],[35.525772,129.023957],[35.525762,129.02388],
+  [35.525764,129.023795],[35.525761,129.023701],[35.525754,129.023568],[35.525756,129.023464],[35.525878,129.023571]
+  ],
+  // 제3코스 실제 GPS 414포인트
+  2:[
+  [35.5259,129.023566],[35.525742,129.023458],[35.525757,129.023629],[35.525762,129.023742],[35.525773,129.023927],[35.525802,129.024074],[35.525841,129.024149],[35.525912,129.024228],[35.525949,129.024309],[35.525963,129.024381],[35.525957,129.024483],[35.526007,129.024611],[35.526103,129.024759],[35.52616,129.024868],[35.526295,129.025048],[35.526413,129.025211],[35.526532,129.025385],[35.526646,129.025567],[35.526692,129.025642],[35.526784,129.025826],[35.526876,129.025994],[35.526947,129.026065],[35.527087,129.02614],[35.527232,129.026218],[35.527306,129.026231],[35.52746,129.026196],[35.527562,129.026171],[35.527686,129.026147],[35.527785,129.026182],[35.527782,129.026356],[35.527775,129.026474],[35.527742,129.026749],[35.527757,129.026915],[35.527774,129.027111],[35.527796,129.027285],[35.527773,129.027411],[35.527754,129.027479],[35.527716,129.027569],[35.527699,129.027646],[35.527701,129.027845],[35.527707,129.028005],[35.527716,129.028156],[35.527734,129.028267],[35.527769,129.028345],[35.527864,129.028455],[35.527988,129.028582],[35.528094,129.028695],[35.528183,129.028763],[35.528341,129.028856],[35.528451,129.029013],[35.528579,129.029217],[35.528676,129.029341],[35.528758,129.02955],[35.528732,129.029585],[35.528648,129.029652],[35.528525,129.029753],[35.52844,129.029806],[35.528245,129.029881],[35.528186,129.029899],[35.528084,129.029965],[35.527967,129.030064],[35.527896,129.030178],[35.527809,129.030386],[35.527698,129.030551],[35.527614,129.030695],[35.52754,129.030836],[35.527511,129.030948],[35.52749,129.031108],[35.527479,129.031243],[35.527476,129.031389],[35.527499,129.03151],[35.527535,129.031657],[35.527577,129.031826],[35.527582,129.031929],[35.52756,129.032171],[35.527538,129.032418],[35.527518,129.032646],[35.527496,129.032899],[35.527488,129.032998],[35.527502,129.033103],[35.527518,129.033189],[35.527546,129.033261],[35.527606,129.033346],[35.527681,129.033394],[35.527758,129.033421],[35.527844,129.0335],[35.527926,129.033569],[35.5281,129.033683],[35.528153,129.033762],[35.528187,129.033887],[35.528219,129.034006],[35.528254,129.03407],[35.528288,129.034135],[35.52837,129.034371],[35.528425,129.034474],[35.528535,129.034637],[35.528611,129.03481],[35.52867,129.034996],[35.528738,129.03524],[35.528815,129.035528],[35.528858,129.035772],[35.528893,129.036084],[35.528938,129.03624],[35.528979,129.036346],[35.52908,129.036516],[35.529189,129.036693],[35.529264,129.036797],[35.529334,129.036917],[35.529412,129.037109],[35.529463,129.037265],[35.52949,129.03742],[35.529529,129.037636],[35.529549,129.037779],[35.529594,129.03794],[35.529661,129.038085],[35.529729,129.038211],[35.529802,129.038395],[35.529852,129.038556],[35.529845,129.03866],[35.529866,129.038746],[35.529959,129.038873],[35.530042,129.039004],[35.53011,129.03913],[35.530169,129.039242],[35.530183,129.039341],[35.530163,129.039435],[35.530131,129.039511],[35.530084,129.039614],[35.53006,129.039675],[35.53004,129.039801],[35.530031,129.039914],[35.530014,129.039979],[35.529987,129.04002],[35.529965,129.040097],[35.52998,129.04018],[35.530096,129.04037],[35.530196,129.040554],[35.53035,129.040784],[35.530444,129.041352],[35.530513,129.041827],[35.530588,129.04232],[35.530665,129.042823],[35.53073,129.043241],[35.530799,129.043554],[35.530891,129.043942],[35.530967,129.044286],[35.531059,129.044688],[35.531115,129.044993],[35.531177,129.045322],[35.531243,129.045657],[35.531305,129.04597],[35.531386,129.046408],[35.531452,129.046715],[35.531466,129.047121],[35.531476,129.04743],[35.531489,129.047777],[35.5315,129.048023],[35.531606,129.048298],[35.531748,129.04866],[35.531874,129.048978],[35.531968,129.049228],[35.532107,129.049565],[35.532226,129.049871],[35.532349,129.050189],[35.532437,129.050406],[35.532643,129.050924],[35.532785,129.051297],[35.532936,129.05167],[35.53307,129.051996],[35.533219,129.052377],[35.53337,129.052758],[35.533539,129.05319],[35.533703,129.05361],[35.533887,129.054072],[35.534062,129.054504],[35.534187,129.054819],[35.534291,129.055086],[35.534403,129.055353],[35.534493,129.055609],[35.534842,129.055797],[35.535017,129.055694],[35.535306,129.055523],[35.535492,129.055417],[35.535754,129.055253],[35.535954,129.055142],[35.536082,129.055063],[35.536266,129.054982],[35.536486,129.054886],[35.536695,129.054797],[35.536951,129.054683],[35.537176,129.054584],[35.537419,129.054471],[35.537614,129.054391],[35.537768,129.054323],[35.537988,129.054265],[35.53816,129.054223],[35.538389,129.054284],[35.538563,129.054332],[35.538738,129.054375],[35.538961,129.054282],[35.53919,129.054197],[35.539329,129.054073],[35.53938,129.054138],[35.539329,129.054073],[35.539178,129.054202],[35.538899,129.054313],[35.538732,129.05437],[35.538505,129.054309],[35.538306,129.054262],[35.538162,129.054217],[35.537922,129.05428],[35.537757,129.054328],[35.537528,129.054424],[35.537333,129.054513],[35.537058,129.054633],[35.536813,129.054745],[35.536592,129.054844],[35.536368,129.054938],[35.536182,129.055021],[35.535911,129.055169],[35.535613,129.055348],[35.53541,129.055465],[35.535247,129.055562],[35.535115,129.055639],[35.534978,129.055721],[35.534844,129.055792],[35.534681,129.055705],[35.534498,129.055607],[35.534358,129.055242],[35.534254,129.054975],[35.534133,129.054674],[35.533995,129.054326],[35.533822,129.053886],[35.533612,129.053365],[35.533468,129.053012],[35.533338,129.052667],[35.533202,129.052327],[35.53291,129.051606],[35.532751,129.051191],[35.532617,129.05086],[35.532491,129.050534],[35.532407,129.050333],[35.532295,129.050038],[35.532174,129.049735],[35.532047,129.049407],[35.53193,129.04912],[35.531826,129.04885],[35.53171,129.04856],[35.531638,129.048382],[35.531504,129.048031],[35.531488,129.0477],[35.531474,129.047328],[35.531459,129.04701],[35.531448,129.046718],[35.531371,129.046316],[35.531293,129.045912],[35.531233,129.045585],[35.531158,129.045214],[35.531101,129.044888],[35.531057,129.044677],[35.530994,129.0444],[35.530933,129.044114],[35.53086,129.043804],[35.530787,129.043471],[35.530728,129.043208],[35.530685,129.042931],[35.530618,129.042502],[35.530539,129.041993],[35.530471,129.041509],[35.530397,129.041053],[35.53035,129.040784],[35.53026,129.040644],[35.530177,129.040518],[35.530056,129.040306],[35.529982,129.040193],[35.529965,129.040102],[35.529985,129.040017],[35.530022,129.039957],[35.530032,129.039883],[35.530048,129.039743],[35.530065,129.039666],[35.530086,129.039609],[35.530142,129.039492],[35.530168,129.039415],[35.530183,129.039319],[35.530171,129.03925],[35.530147,129.039197],[35.530099,129.0391],[35.530009,129.038946],[35.52991,129.038808],[35.529878,129.038755],[35.529847,129.038666],[35.529852,129.03855],[35.529783,129.038339],[35.529729,129.038203],[35.529642,129.038038],[35.529596,129.037943],[35.529551,129.037788],[35.529515,129.037569],[35.529468,129.037276],[35.529384,129.037037],[35.529327,129.036908],[35.529231,129.036754],[35.529134,129.0366],[35.529036,129.036432],[35.528977,129.036332],[35.528914,129.036159],[35.528895,129.036087],[35.528869,129.035888],[35.528842,129.035659],[35.528821,129.035534],[35.528762,129.035331],[35.528698,129.035101],[35.528645,129.03491],[35.528611,129.034804],[35.528559,129.034681],[35.528456,129.034514],[35.528361,129.034349],[35.528301,129.034179],[35.528254,129.034067],[35.528221,129.034012],[35.528174,129.033834],[35.528153,129.033765],[35.528096,129.03368],[35.528002,129.033615],[35.527875,129.033532],[35.527795,129.033455],[35.527677,129.033386],[35.527604,129.033337],[35.527546,129.033264],[35.527518,129.033186],[35.5275,129.033078],[35.52749,129.033001],[35.527502,129.032819],[35.527526,129.032589],[35.527546,129.032316],[35.527566,129.032094],[35.527584,129.031934],[35.52758,129.031821],[35.527556,129.031743],[35.527525,129.031599],[35.527493,129.031477],[35.527476,129.031394],[35.527478,129.031298],[35.527487,129.031166],[35.527508,129.031006],[35.527516,129.03094],[35.527547,129.030825],[35.527614,129.0307],[35.527719,129.030518],[35.527811,129.03038],[35.527891,129.030189],[35.527956,129.030078],[35.528068,129.029976],[35.528182,129.029902],[35.528354,129.029837],[35.528438,129.029803],[35.528561,129.029724],[35.528684,129.029625],[35.528762,129.029558],[35.52871,129.029424],[35.528676,129.02933],[35.528559,129.029173],[35.528421,129.02896],[35.528353,129.028861],[35.528185,129.028755],[35.528092,129.028695],[35.527983,129.028574],[35.527853,129.028452],[35.52778,129.028365],[35.527734,129.028281],[35.527713,129.028167],[35.527707,129.028021],[35.527698,129.027861],[35.527697,129.027654],[35.527714,129.027567],[35.527752,129.027479],[35.527775,129.027408],[35.527793,129.027296],[35.527772,129.027083],[35.527754,129.026835],[35.527744,129.02676],[35.527764,129.026595],[35.527775,129.026482],[35.527786,129.026361],[35.527787,129.026191],[35.527686,129.026149],[35.527578,129.026158],[35.527435,129.026198],[35.527316,129.026226],[35.527232,129.026218],[35.527054,129.026125],[35.526949,129.02607],[35.526878,129.026008],[35.526771,129.025796],[35.52669,129.025642],[35.526589,129.02548],[35.526484,129.025317],[35.526365,129.025143],[35.526233,129.024961],[35.526158,129.024871],[35.526103,129.024759],[35.526011,129.024622],[35.525959,129.024497],[35.525961,129.024403],[35.52596,129.024329],[35.525923,129.024245],[35.525848,129.02416],[35.525811,129.024082],[35.525784,129.023944],[35.525764,129.02375],[35.525758,129.023607],[35.525749,129.023463],[35.525958,129.023612]
+  ],
+  // 제4코스 = 제2코스(올라가는길) + 제3코스 후반부(내려오는길) 조합 — 코드로 런타임 생성
+  // 제4코스 GPS = 제2코스(오름)+제3코스역순(내림) 1547포인트
+  3:[
+  [35.52588,129.023555],[35.525745,129.023452],[35.525762,129.023604],[35.525761,129.023665],[35.525761,129.023825],[35.525772,129.023946],[35.525802,129.024057],[35.525852,129.02415]
+  [35.525921,129.024239],[35.525958,129.024295],[35.525957,129.024364],[35.52596,129.024444],[35.525952,129.024494],[35.526007,129.024603],[35.526143,129.02484],[35.526303,129.025054]
+  [35.526411,129.0252],[35.526572,129.025446],[35.52669,129.025648],[35.526801,129.025849],[35.526873,129.025999],[35.526944,129.026067],[35.527101,129.026143],[35.527239,129.026221]
+  [35.527315,129.026228],[35.527533,129.026179],[35.527682,129.026149],[35.527794,129.026182],[35.527926,129.026244],[35.528125,129.026326],[35.528312,129.026331],[35.528431,129.026325]
+  [35.528504,129.026308],[35.528584,129.026246],[35.528628,129.026146],[35.528663,129.026075],[35.528716,129.026021],[35.528881,129.025962],[35.529022,129.025921],[35.529105,129.025912]
+  [35.529213,129.025912],[35.529329,129.025882],[35.529426,129.025838],[35.529601,129.02574],[35.52972,129.025674],[35.529831,129.025638],[35.529923,129.025632],[35.530074,129.025634]
+  [35.530209,129.02564],[35.530299,129.025634],[35.530381,129.025616],[35.530471,129.025575],[35.530558,129.025541],[35.530661,129.025535],[35.530767,129.025546],[35.530874,129.025585]
+  [35.530973,129.025642],[35.531057,129.025713],[35.531148,129.025785],[35.531273,129.025843],[35.531377,129.025865],[35.531471,129.025873],[35.531598,129.025856],[35.531717,129.025862]
+  [35.531852,129.025882],[35.531986,129.025919],[35.532145,129.025964],[35.532311,129.026007],[35.532453,129.026043],[35.532643,129.026089],[35.532814,129.02613],[35.532958,129.026164]
+  [35.533032,129.026165],[35.533105,129.02612],[35.533188,129.025998],[35.533228,129.025914],[35.533385,129.025957],[35.533516,129.025781],[35.533629,129.025632],[35.533765,129.025459]
+  [35.533837,129.025337],[35.533704,129.025154],[35.533576,129.025002],[35.533523,129.024844],[35.533523,129.024709],[35.533597,129.024592],[35.533692,129.024584],[35.533858,129.024585]
+  [35.534032,129.024559],[35.534114,129.02452],[35.534151,129.024468],[35.534262,129.024402],[35.534336,129.024319],[35.534386,129.024254],[35.534466,129.024206],[35.534576,129.024247]
+  [35.534655,129.024244],[35.534737,129.024199],[35.534803,129.024143],[35.534881,129.024021],[35.53498,129.02393],[35.535138,129.023776],[35.535214,129.023696],[35.535295,129.023656]
+  [35.535429,129.023618],[35.535527,129.023513],[35.535611,129.023477],[35.535692,129.023512],[35.535795,129.023548],[35.535883,129.023566],[35.535968,129.023558],[35.536066,129.023486]
+  [35.536253,129.023369],[35.536385,129.02329],[35.536494,129.023246],[35.536625,129.023213],[35.536741,129.023131],[35.536907,129.023052],[35.537087,129.022971],[35.537277,129.022877]
+  [35.537395,129.022822],[35.53757,129.022782],[35.537701,129.022749],[35.537776,129.022693],[35.537887,129.02268],[35.537977,129.022649],[35.538077,129.022627],[35.538192,129.022632]
+  [35.538324,129.022638],[35.538485,129.022571],[35.538656,129.022487],[35.538781,129.022413],[35.538863,129.022371],[35.53905,129.022353],[35.539221,129.022355],[35.539319,129.022313]
+  [35.539381,129.022257],[35.539424,129.0222],[35.539502,129.022158],[35.53959,129.022135],[35.53967,129.022082],[35.539722,129.022031],[35.539818,129.021987],[35.539906,129.02197]
+  [35.54005,129.021971],[35.540208,129.021961],[35.540382,129.021946],[35.54065,129.021919],[35.540865,129.021884],[35.541011,129.021865],[35.54116,129.021872],[35.541314,129.021848]
+  [35.541575,129.021835],[35.541796,129.021816],[35.541952,129.021814],[35.542075,129.021845],[35.542198,129.021922],[35.542335,129.022033],[35.542504,129.022178],[35.542738,129.022366]
+  [35.542865,129.022455],[35.54294,129.022523],[35.543019,129.022533],[35.543235,129.022651],[35.543441,129.022756],[35.543613,129.022854],[35.543861,129.023114],[35.543889,129.023167]
+  [35.543977,129.023307],[35.54417,129.023496],[35.5443,129.023615],[35.544498,129.023783],[35.544632,129.023886],[35.544814,129.024044],[35.544954,129.024241],[35.544987,129.024305]
+  [35.545028,129.02445],[35.545054,129.024649],[35.545075,129.024823],[35.545088,129.024997],[35.545097,129.025129],[35.545127,129.025224],[35.545167,129.025277],[35.545239,129.025276]
+  [35.545265,129.025175],[35.545278,129.024949],[35.54529,129.024759],[35.54532,129.024498],[35.545288,129.024398],[35.545269,129.024298],[35.545256,129.024119],[35.545196,129.023814]
+  [35.54514,129.023667],[35.545071,129.023483],[35.545027,129.023383],[35.544975,129.023313],[35.5449,129.023181],[35.544835,129.023039],[35.544776,129.022916],[35.54469,129.02284]
+  [35.544621,129.022791],[35.544579,129.022749],[35.544545,129.022712],[35.544519,129.022678],[35.544493,129.022603],[35.544472,129.022531],[35.544442,129.022428],[35.544401,129.022333]
+  [35.544345,129.022291],[35.544269,129.022247],[35.5442,129.022196],[35.544154,129.022123],[35.544107,129.022012],[35.544069,129.021947],[35.544037,129.021883],[35.54397,129.021813]
+  [35.54389,129.021775],[35.543828,129.021715],[35.543775,129.021648],[35.543896,129.021659],[35.543988,129.021681],[35.544071,129.021686],[35.544143,129.02174],[35.544208,129.021857]
+  [35.544274,129.02195],[35.544366,129.022002],[35.544521,129.022011],[35.544595,129.022035],[35.544666,129.022089],[35.544719,129.022148],[35.544754,129.022215],[35.544804,129.022319]
+  [35.544908,129.022338],[35.545013,129.022354],[35.545087,129.022389],[35.545128,129.022467],[35.545172,129.022582],[35.545271,129.022705],[35.545358,129.022732],[35.545473,129.022727]
+  [35.545551,129.022685],[35.545664,129.022657],[35.545783,129.022671],[35.545859,129.02272],[35.545891,129.022779],[35.545893,129.022845],[35.5459,129.022942],[35.545919,129.023022]
+  [35.545963,129.023095],[35.54613,129.023198],[35.546215,129.02325],[35.546245,129.023317],[35.546241,129.023444],[35.546234,129.023567],[35.546235,129.023636],[35.546218,129.023713]
+  [35.546233,129.023788],[35.546274,129.023888],[35.546367,129.023948],[35.54652,129.024002],[35.546643,129.024066],[35.546742,129.024165],[35.546795,129.024268],[35.546833,129.024365]
+  [35.546887,129.024532],[35.546906,129.024635],[35.546917,129.024748],[35.546911,129.024828],[35.546892,129.024929],[35.546827,129.025024],[35.546797,129.025062],[35.546781,129.025095]
+  [35.546786,129.025166],[35.546805,129.02523],[35.546852,129.025303],[35.547021,129.025398],[35.547141,129.025498],[35.547283,129.025625],[35.547465,129.025779],[35.547658,129.025955]
+  [35.547749,129.026037],[35.54784,129.026147],[35.547881,129.026222],[35.547892,129.026283],[35.547886,129.026349],[35.547855,129.026453],[35.547816,129.026507],[35.54777,129.026558]
+  [35.547697,129.02662],[35.547608,129.026689],[35.547535,129.026751],[35.547418,129.026864],[35.547385,129.026915],[35.547373,129.02697],[35.547381,129.027056],[35.547384,129.027144]
+  [35.547411,129.027255],[35.547441,129.027385],[35.547457,129.027496],[35.547465,129.027562],[35.547463,129.027661],[35.547444,129.027741],[35.54742,129.027806],[35.54735,129.027932]
+  [35.547323,129.028055],[35.547356,129.028152],[35.547383,129.028233],[35.547415,129.028347],[35.547419,129.028416],[35.547402,129.028501],[35.547373,129.028574],[35.547329,129.028656]
+  [35.547294,129.028724],[35.547275,129.028784],[35.547271,129.028869],[35.547265,129.028991],[35.547248,129.029164],[35.547228,129.029428],[35.547218,129.029494],[35.547201,129.029573]
+  [35.547208,129.029667],[35.547239,129.029742],[35.547318,129.02983],[35.547383,129.029895],[35.547426,129.029962],[35.547423,129.030017],[35.547411,129.030064],[35.547339,129.030216]
+  [35.547347,129.030274],[35.547382,129.030355],[35.547465,129.030459],[35.547576,129.030603],[35.547753,129.030764],[35.547866,129.030866],[35.547948,129.03094],[35.54799,129.031002]
+  [35.548005,129.031063],[35.547988,129.031107],[35.547961,129.031133],[35.547918,129.031154],[35.547803,129.031163],[35.547694,129.031171],[35.547631,129.031194],[35.547579,129.031229]
+  [35.547542,129.031258],[35.5475,129.031334],[35.547481,129.031414],[35.547463,129.031515],[35.547448,129.031636],[35.547436,129.031688],[35.547412,129.031767],[35.547359,129.031849]
+  [35.547303,129.031913],[35.547267,129.031962],[35.547241,129.032017],[35.547233,129.032066],[35.547218,129.032176],[35.547207,129.032267],[35.547189,129.032412],[35.547186,129.032495]
+  [35.547166,129.032594],[35.547152,129.032635],[35.547108,129.032708],[35.547057,129.032776],[35.547059,129.032916],[35.547059,129.033057],[35.547038,129.033246],[35.547033,129.03342]
+  [35.547016,129.03361],[35.547013,129.033905],[35.547011,129.034155],[35.547005,129.034409],[35.547009,129.034541],[35.547015,129.034602],[35.547035,129.034727],[35.547058,129.03487]
+  [35.547064,129.035011],[35.547031,129.03525],[35.547009,129.035459],[35.54698,129.035737],[35.546976,129.036087],[35.546975,129.036415],[35.546974,129.036605],[35.546969,129.036806]
+  [35.546995,129.036958],[35.54703,129.037042],[35.547082,129.037165],[35.547132,129.037276],[35.547201,129.037443],[35.547231,129.037554],[35.547248,129.037717],[35.547242,129.037805]
+  [35.547234,129.037896],[35.547192,129.037991],[35.547139,129.038048],[35.547064,129.038121],[35.547015,129.038166],[35.546987,129.038226],[35.54695,129.038322],[35.546927,129.038362]
+  [35.546881,129.038383],[35.546798,129.038376],[35.546764,129.038375],[35.546716,129.038401],[35.546696,129.038423],[35.546681,129.038466],[35.546663,129.038518],[35.546661,129.038598]
+  [35.54666,129.038689],[35.546653,129.038816],[35.546637,129.038986],[35.54662,129.039151],[35.546602,129.039278],[35.546589,129.039388],[35.546572,129.039486],[35.546557,129.039549]
+  [35.546531,129.039651],[35.546485,129.039812],[35.546432,129.040004],[35.546412,129.040304],[35.546382,129.040568],[35.546357,129.040732],[35.546334,129.040897],[35.546316,129.041018]
+  [35.546303,129.041155],[35.54629,129.041232],[35.5463,129.041329],[35.546343,129.041451],[35.546387,129.041615],[35.546388,129.04169],[35.546387,129.041775],[35.546382,129.041891]
+  [35.546396,129.042023],[35.546425,129.0422],[35.546458,129.042358],[35.546503,129.042511],[35.546547,129.042576],[35.546627,129.042633],[35.546722,129.042696],[35.546794,129.042758]
+  [35.546837,129.042845],[35.546845,129.042922],[35.546837,129.042991],[35.546816,129.043029],[35.546793,129.043067],[35.546622,129.043179],[35.546476,129.043277],[35.546349,129.043359]
+  [35.546203,129.04343],[35.546085,129.043476],[35.545956,129.043517],[35.545886,129.043557],[35.545844,129.0436],[35.545807,129.043651],[35.545926,129.043723],[35.546084,129.043796]
+  [35.546243,129.043899],[35.546381,129.043983],[35.546555,129.044089],[35.546708,129.044192],[35.54684,129.044273],[35.546947,129.044314],[35.5471,129.044368],[35.547288,129.044397]
+  [35.547531,129.044412],[35.547685,129.04441],[35.54778,129.044379],[35.547916,129.044308],[35.547907,129.044452],[35.5479,129.0446],[35.547897,129.044796],[35.547903,129.044937]
+  [35.547927,129.045144],[35.547786,129.045234],[35.547636,129.045296],[35.547461,129.045366],[35.547284,129.045425],[35.547101,129.045484],[35.546895,129.045559],[35.546742,129.045536]
+  [35.546569,129.045663],[35.546443,129.045757],[35.546386,129.045813],[35.546315,129.045886],[35.546165,129.045937],[35.546095,129.045955],[35.545998,129.045983],[35.545814,129.046041]
+  [35.545735,129.046083],[35.545599,129.046099],[35.545464,129.046123],[35.545233,129.046151],[35.545232,129.046239],[35.545163,129.046322],[35.545012,129.046302],[35.544944,129.046482]
+  [35.5449,129.046666],[35.544775,129.046732],[35.54469,129.046829],[35.544673,129.047046],[35.544607,129.047237],[35.544472,129.047195],[35.544389,129.047176],[35.544346,129.047189]
+  [35.54429,129.047204],[35.544195,129.047229],[35.544097,129.047425],[35.544032,129.047636],[35.543889,129.047732],[35.543849,129.047819],[35.543738,129.047959],[35.543633,129.048053]
+  [35.543516,129.048169],[35.543422,129.048252],[35.543326,129.04834],[35.543308,129.048373],[35.543056,129.04835],[35.542903,129.048335],[35.542712,129.048322],[35.542567,129.048222]
+  [35.54236,129.048183],[35.542191,129.048187],[35.542056,129.048189],[35.541917,129.048175],[35.541719,129.048167],[35.541541,129.048162],[35.541415,129.048159],[35.541259,129.048172]
+  [35.541053,129.048197],[35.540916,129.048224],[35.540757,129.048258],[35.540552,129.04825],[35.540425,129.048305],[35.540308,129.048343],[35.540217,129.048501],[35.540173,129.048684]
+  [35.540169,129.048797],[35.540136,129.049023],[35.540078,129.049239],[35.540059,129.049462],[35.540017,129.049684],[35.539985,129.049799],[35.539961,129.050063],[35.539955,129.05028]
+  [35.539949,129.050468],[35.539891,129.050742],[35.539877,129.051017],[35.539837,129.051247],[35.539802,129.051456],[35.539809,129.051713],[35.539791,129.051988],[35.539778,129.052307]
+  [35.53973,129.05265],[35.539699,129.052892],[35.539665,129.053142],[35.539639,129.053321],[35.539608,129.053568],[35.539558,129.053746],[35.539512,129.053921],[35.539343,129.054057]
+  [35.539505,129.053915],[35.539551,129.053776],[35.539606,129.053573],[35.539637,129.053343],[35.539678,129.053068],[35.539709,129.052815],[35.53975,129.052521],[35.539784,129.052244]
+  [35.539792,129.052024],[35.53981,129.051746],[35.539803,129.05155],[35.539804,129.05144],[35.539872,129.051064],[35.539886,129.050899],[35.53989,129.050755],[35.539945,129.050481]
+  [35.53996,129.050129],[35.539977,129.049895],[35.539988,129.049788],[35.540017,129.049684],[35.540061,129.049453],[35.540076,129.049261],[35.540122,129.049053],[35.540162,129.048836]
+  [35.540173,129.048718],[35.54021,129.048539],[35.540284,129.048381],[35.540414,129.048302],[35.540543,129.048253],[35.540715,129.048249],[35.54087,129.048234],[35.541026,129.048199]
+  [35.541232,129.048179],[35.541387,129.048164],[35.541529,129.048162],[35.541692,129.048166],[35.541845,129.04817],[35.542038,129.048183],[35.542167,129.048181],[35.54236,129.048178]
+  [35.542558,129.048221],[35.542712,129.048319],[35.542885,129.04834],[35.543171,129.048361],[35.54331,129.048373],[35.543365,129.048303],[35.543475,129.048203],[35.54358,129.048104]
+  [35.543715,129.047981],[35.543837,129.047835],[35.543889,129.047729],[35.544025,129.047636],[35.544094,129.047436],[35.544194,129.047235],[35.544374,129.047168],[35.544598,129.047229]
+  [35.544675,129.047057],[35.544692,129.046834],[35.544766,129.046731],[35.544893,129.046666],[35.544944,129.046477],[35.545008,129.04631],[35.545158,129.046317],[35.545227,129.046241]
+  [35.54522,129.04615],[35.545452,129.046123],[35.545723,129.04608],[35.545819,129.04603],[35.545993,129.04598],[35.546256,129.045909],[35.546438,129.045762],[35.546605,129.045631]
+  [35.54674,129.045533],[35.54689,129.045553],[35.547212,129.045446],[35.547398,129.045381],[35.547586,129.045314],[35.547736,129.045252],[35.547929,129.045147],[35.547904,129.044909]
+  [35.547901,129.044686],[35.547912,129.044534],[35.547914,129.044314],[35.547778,129.044379],[35.547649,129.044404],[35.547428,129.044404],[35.547219,129.044382],[35.547055,129.04435]
+  [35.546807,129.04425],[35.546659,129.044161],[35.546488,129.044046],[35.546334,129.043954],[35.546202,129.043874],[35.54604,129.043773],[35.545903,129.043703],[35.545805,129.043651]
+  [35.545874,129.043559],[35.546056,129.043478],[35.546203,129.043427],[35.546351,129.043356],[35.546572,129.043213],[35.546793,129.043067],[35.54683,129.043013],[35.546849,129.042933]
+  [35.546833,129.042834],[35.546789,129.042753],[35.546696,129.042684],[35.546613,129.042624],[35.546553,129.042581],[35.54651,129.042498],[35.546473,129.042397],[35.54645,129.042281]
+  [35.546417,129.042131],[35.546392,129.041982],[35.546383,129.041885],[35.546382,129.041761],[35.546394,129.041626],[35.546357,129.041501],[35.546308,129.041349],[35.54629,129.041238]
+  [35.546305,129.04115],[35.546324,129.040977],[35.546356,129.040763],[35.546377,129.040631],[35.546403,129.040408],[35.54642,129.040205],[35.546435,129.039996],[35.546495,129.039774]
+  [35.546552,129.039596],[35.546572,129.039497],[35.546596,129.039371],[35.54661,129.039231],[35.546631,129.03903],[35.546645,129.038901],[35.546658,129.038758],[35.546662,129.038659]
+  [35.546664,129.038568],[35.546672,129.038505],[35.546691,129.038442],[35.546746,129.038377],[35.546899,129.03837],[35.546959,129.038303],[35.546992,129.038212],[35.547036,129.038145]
+  [35.547116,129.038078],[35.547199,129.037983],[35.547236,129.037899],[35.547245,129.037789],[35.547245,129.037673],[35.547241,129.037588],[35.547231,129.037532],[35.547205,129.037463]
+  [35.547193,129.037399],[35.547126,129.037243],[35.547076,129.037134],[35.547024,129.037011],[35.546989,129.03692],[35.546973,129.036787],[35.546982,129.036547],[35.546981,129.036357]
+  [35.546983,129.036206],[35.546982,129.036029],[35.546983,129.035839],[35.546987,129.035693],[35.546999,129.035531],[35.54701,129.035421],[35.547026,129.03528],[35.547036,129.035206]
+  [35.547066,129.035014],[35.547057,129.034879],[35.547039,129.034752],[35.547011,129.034558],[35.54701,129.034354],[35.547012,129.034098],[35.547019,129.033808],[35.547018,129.033613]
+  [35.547033,129.033414],[35.547045,129.033236],[35.547061,129.033062],[35.547054,129.03293],[35.547059,129.032787],[35.547122,129.032683],[35.547163,129.03261],[35.547178,129.032547]
+  [35.547189,129.032437],[35.547197,129.03236],[35.547212,129.03225],[35.547223,129.032148],[35.547235,129.032072],[35.54725,129.031995],[35.54729,129.031932],[35.547343,129.031868]
+  [35.547386,129.031805],[35.547426,129.031737],[35.547443,129.031661],[35.547458,129.031581],[35.547468,129.031504],[35.547483,129.031422],[35.547498,129.031348],[35.547524,129.031282]
+  [35.547581,129.031226],[35.547656,129.031175],[35.5478,129.031162],[35.547927,129.031149],[35.548,129.031096],[35.548008,129.03103],[35.547968,129.030963],[35.54792,129.030915]
+  [35.54782,129.030813],[35.547713,129.030725],[35.547571,129.030589],[35.547452,129.030431],[35.547388,129.030361],[35.547353,129.030288],[35.547343,129.030233],[35.547358,129.030167]
+  [35.547388,129.030113],[35.547412,129.030039],[35.547426,129.029982],[35.547411,129.029937],[35.547363,129.029875],[35.547303,129.029807],[35.547232,129.02972],[35.547206,129.029667]
+  [35.547205,129.029612],[35.547213,129.029532],[35.547221,129.029458],[35.547236,129.029348],[35.547242,129.029263],[35.547254,129.029128],[35.547266,129.029029],[35.547268,129.028947]
+  [35.547276,129.02885],[35.547282,129.028754],[35.547318,129.028672],[35.547355,129.02861],[35.547385,129.028539],[35.547409,129.028468],[35.547417,129.02836],[35.547386,129.028238]
+  [35.547349,129.028119],[35.547323,129.02806],[35.547348,129.027937],[35.547411,129.02782],[35.547448,129.027747],[35.547463,129.027648],[35.547465,129.02754],[35.547451,129.027454]
+  [35.547436,129.027374],[35.547413,129.027272],[35.547388,129.027158],[35.547379,129.027056],[35.547375,129.026976],[35.547383,129.026912],[35.547422,129.026858],[35.547569,129.026716]
+  [35.547717,129.026601],[35.547818,129.026504],[35.547867,129.02642],[35.547886,129.026327],[35.547888,129.02625],[35.547862,129.026177],[35.547802,129.026102],[35.54763,129.025924]
+  [35.547532,129.025841],[35.547403,129.025719],[35.547257,129.025589],[35.547139,129.025487],[35.547021,129.02539],[35.546941,129.025347],[35.546865,129.025312],[35.546821,129.025258]
+  [35.546795,129.025186],[35.54678,129.025119],[35.546797,129.025062],[35.546832,129.024997],[35.546889,129.024924],[35.546906,129.024858],[35.546913,129.024737],[35.546899,129.024618]
+  [35.546872,129.024499],[35.546836,129.024365],[35.546777,129.024234],[35.546705,129.024131],[35.546611,129.024054],[35.546477,129.023979],[35.546358,129.023943],[35.546276,129.023883]
+  [35.54623,129.023785],[35.546211,129.02373],[35.54624,129.023642],[35.546241,129.023548],[35.546248,129.023433],[35.546243,129.023317],[35.54621,129.023255],[35.546083,129.023167]
+  [35.545965,129.0231],[35.54593,129.023039],[35.545904,129.022945],[35.545899,129.022856],[35.545889,129.022779],[35.545861,129.02272],[35.545785,129.022669],[35.54576,129.022662]
+  [35.545662,129.022652],[35.545551,129.022688],[35.545469,129.022727],[35.545356,129.022732],[35.545271,129.022703],[35.54518,129.022604],[35.54515,129.02252],[35.545115,129.022448]
+  [35.545085,129.022386],[35.545006,129.022351],[35.544908,129.022341],[35.544802,129.022316],[35.54475,129.022207],[35.544695,129.02212],[35.544657,129.022086],[35.544631,129.022061]
+  [35.544533,129.022],[35.544478,129.022005],[35.544469,129.022007],[35.544366,129.022004],[35.544274,129.02195],[35.544213,129.021863],[35.544149,129.021765],[35.54408,129.021694]
+  [35.543892,129.021659],[35.543775,129.021648],[35.543867,129.02176],[35.543966,129.02181],[35.544036,129.021894],[35.544093,129.021992],[35.54413,129.022084],[35.544183,129.022165]
+  [35.544263,129.02225],[35.544356,129.022299],[35.54442,129.022375],[35.544485,129.022564],[35.544504,129.022634],[35.544541,129.022712],[35.544656,129.022822],[35.544752,129.022899]
+  [35.544811,129.022994],[35.544856,129.0231],[35.544928,129.02324],[35.544983,129.023318],[35.545038,129.023408],[35.545095,129.023544],[35.545155,129.023717],[35.5452,129.023817]
+  [35.545213,129.023897],[35.545231,129.024003],[35.545252,129.024113],[35.545257,129.024188],[35.545267,129.024276],[35.545292,129.024404],[35.545322,129.024515],[35.545311,129.024614]
+  [35.545292,129.024801],[35.545286,129.024919],[35.545276,129.025109],[35.545265,129.025219],[35.545244,129.025246],[35.545174,129.025272],[35.545123,129.025226],[35.545099,129.025138]
+  [35.545092,129.025058],[35.545085,129.024925],[35.545065,129.024745],[35.545048,129.024577],[35.545026,129.02443],[35.544996,129.02433],[35.544926,129.024207],[35.544838,129.024084]
+  [35.54478,129.024022],[35.544683,129.023925],[35.544574,129.023843],[35.544491,129.023777],[35.544411,129.023712],[35.544287,129.023604],[35.544147,129.023474],[35.544061,129.023389]
+  [35.543986,129.023313],[35.543933,129.02324],[35.543858,129.023119],[35.543754,129.023001],[35.543703,129.022947],[35.543566,129.022828],[35.543385,129.022721],[35.543202,129.022637]
+  [35.543115,129.022591],[35.543021,129.022528],[35.542936,129.02252],[35.542693,129.022326],[35.542453,129.02213],[35.542309,129.022008],[35.542182,129.021914],[35.54207,129.02185]
+  [35.541927,129.021816],[35.541731,129.021823],[35.541537,129.021837],[35.541275,129.021855],[35.541149,129.021871],[35.541009,129.021868],[35.540829,129.021891],[35.540612,129.021919]
+  [35.540499,129.021935],[35.540307,129.021958],[35.540169,129.021971],[35.540027,129.02197],[35.540005,129.021975],[35.539908,129.021978],[35.539811,129.021989],[35.53972,129.022037]
+  [35.539656,129.022093],[35.539601,129.02213],[35.539508,129.022161],[35.539422,129.022206],[35.539362,129.022273],[35.539303,129.022318],[35.539219,129.02236],[35.539048,129.022356]
+  [35.538967,129.022365],[35.538863,129.022371],[35.538742,129.022442],[35.538617,129.022511],[35.538463,129.022584],[35.538322,129.022638],[35.538183,129.022632],[35.538068,129.022637]
+  [35.53797,129.022657],[35.53788,129.022688],[35.537783,129.022691],[35.537696,129.022752],[35.537538,129.022789],[35.537373,129.022838],[35.537225,129.022908],[35.537043,129.022992]
+  [35.536859,129.023081],[35.536739,129.023133],[35.536621,129.023213],[35.536476,129.023253],[35.536358,129.0233],[35.536157,129.02343],[35.536053,129.023499],[35.535964,129.023557]
+  [35.53588,129.023566],[35.535781,129.023547],[35.535692,129.023515],[35.535614,129.023483],[35.535562,129.023492],[35.535516,129.02353],[35.535431,129.023616],[35.535384,129.023631]
+  [35.535293,129.023656],[35.535204,129.023715],[35.535122,129.023798],[35.535035,129.023887],[35.534943,129.023967],[35.534877,129.024032],[35.5348,129.024151],[35.534734,129.024205]
+  [35.534655,129.024247],[35.534573,129.024247],[35.534466,129.024209],[35.534384,129.024254],[35.53432,129.024335],[35.534265,129.024391],[35.534151,129.02446],[35.534107,129.024522]
+  [35.534025,129.024564],[35.533964,129.024563],[35.533849,129.02459],[35.533795,129.024589],[35.533694,129.024584],[35.533592,129.024592],[35.533525,129.024706],[35.533524,129.024794]
+  [35.533529,129.024858],[35.533555,129.024933],[35.533598,129.025028],[35.53368,129.025129],[35.533753,129.02523],[35.533828,129.025337],[35.533792,129.025418],[35.533705,129.025537]
+  [35.533587,129.025697],[35.533463,129.025862],[35.533378,129.025962],[35.533227,129.025922],[35.533181,129.026007],[35.533098,129.026123],[35.533055,129.026152],[35.532958,129.026155]
+  [35.532915,129.026146],[35.53276,129.026114],[35.532619,129.026083],[35.532426,129.026029],[35.532258,129.025986],[35.532101,129.025949],[35.531955,129.025904],[35.531809,129.02587]
+  [35.531697,129.025856],[35.53157,129.025859],[35.531467,129.025867],[35.53137,129.025865],[35.531251,129.025831],[35.531126,129.025767],[35.531028,129.025691],[35.530959,129.025639]
+  [35.530868,129.025585],[35.530753,129.025546],[35.530659,129.025524],[35.530551,129.025535],[35.530453,129.025571],[35.53039,129.025603],[35.530306,129.025631],[35.530171,129.025639]
+  [35.53004,129.025635],[35.529923,129.025627],[35.529833,129.025633],[35.529715,129.025677],[35.529579,129.025751],[35.529513,129.02579],[35.529415,129.025835],[35.529308,129.025882]
+  [35.529213,129.025907],[35.529028,129.025916],[35.528978,129.025934],[35.528843,129.025977],[35.528732,129.026013],[35.528677,129.026067],[35.528619,129.026162],[35.528574,129.026254]
+  [35.528513,129.026297],[35.528409,129.026325],[35.528251,129.026329],[35.528118,129.026326],[35.527886,129.026221],[35.527783,129.026174],[35.527684,129.026144],[35.52763,129.026162]
+  [35.527517,129.026184],[35.527422,129.026203],[35.527237,129.026224],[35.527083,129.026129],[35.52694,129.026067],[35.526873,129.025999],[35.526825,129.025907],[35.526756,129.025765]
+  [35.526648,129.025583],[35.526508,129.025351],[35.526372,129.025149],[35.526275,129.025014],[35.5262,129.024913],[35.526097,129.024759],[35.526003,129.024583],[35.525952,129.024502]
+  [35.52596,129.024433],[35.525957,129.024329],[35.525949,129.024287],[35.52591,129.024223],[35.525843,129.024144],[35.525802,129.024038],[35.525772,129.023957],[35.525762,129.02388]
+  [35.525764,129.023795],[35.525761,129.023701],[35.525754,129.023568],[35.525756,129.023464],[35.525878,129.023571],[35.525958,129.023612],[35.525749,129.023463],[35.525758,129.023607]
+  [35.525764,129.02375],[35.525784,129.023944],[35.525811,129.024082],[35.525848,129.02416],[35.525923,129.024245],[35.52596,129.024329],[35.525961,129.024403],[35.525959,129.024497]
+  [35.526011,129.024622],[35.526103,129.024759],[35.526158,129.024871],[35.526233,129.024961],[35.526365,129.025143],[35.526484,129.025317],[35.526589,129.02548],[35.52669,129.025642]
+  [35.526771,129.025796],[35.526878,129.026008],[35.526949,129.02607],[35.527054,129.026125],[35.527232,129.026218],[35.527316,129.026226],[35.527435,129.026198],[35.527578,129.026158]
+  [35.527686,129.026149],[35.527787,129.026191],[35.527786,129.026361],[35.527775,129.026482],[35.527764,129.026595],[35.527744,129.02676],[35.527754,129.026835],[35.527772,129.027083]
+  [35.527793,129.027296],[35.527775,129.027408],[35.527752,129.027479],[35.527714,129.027567],[35.527697,129.027654],[35.527698,129.027861],[35.527707,129.028021],[35.527713,129.028167]
+  [35.527734,129.028281],[35.52778,129.028365],[35.527853,129.028452],[35.527983,129.028574],[35.528092,129.028695],[35.528185,129.028755],[35.528353,129.028861],[35.528421,129.02896]
+  [35.528559,129.029173],[35.528676,129.02933],[35.52871,129.029424],[35.528762,129.029558],[35.528684,129.029625],[35.528561,129.029724],[35.528438,129.029803],[35.528354,129.029837]
+  [35.528182,129.029902],[35.528068,129.029976],[35.527956,129.030078],[35.527891,129.030189],[35.527811,129.03038],[35.527719,129.030518],[35.527614,129.0307],[35.527547,129.030825]
+  [35.527516,129.03094],[35.527508,129.031006],[35.527487,129.031166],[35.527478,129.031298],[35.527476,129.031394],[35.527493,129.031477],[35.527525,129.031599],[35.527556,129.031743]
+  [35.52758,129.031821],[35.527584,129.031934],[35.527566,129.032094],[35.527546,129.032316],[35.527526,129.032589],[35.527502,129.032819],[35.52749,129.033001],[35.5275,129.033078]
+  [35.527518,129.033186],[35.527546,129.033264],[35.527604,129.033337],[35.527677,129.033386],[35.527795,129.033455],[35.527875,129.033532],[35.528002,129.033615],[35.528096,129.03368]
+  [35.528153,129.033765],[35.528174,129.033834],[35.528221,129.034012],[35.528254,129.034067],[35.528301,129.034179],[35.528361,129.034349],[35.528456,129.034514],[35.528559,129.034681]
+  [35.528611,129.034804],[35.528645,129.03491],[35.528698,129.035101],[35.528762,129.035331],[35.528821,129.035534],[35.528842,129.035659],[35.528869,129.035888],[35.528895,129.036087]
+  [35.528914,129.036159],[35.528977,129.036332],[35.529036,129.036432],[35.529134,129.0366],[35.529231,129.036754],[35.529327,129.036908],[35.529384,129.037037],[35.529468,129.037276]
+  [35.529515,129.037569],[35.529551,129.037788],[35.529596,129.037943],[35.529642,129.038038],[35.529729,129.038203],[35.529783,129.038339],[35.529852,129.03855],[35.529847,129.038666]
+  [35.529878,129.038755],[35.52991,129.038808],[35.530009,129.038946],[35.530099,129.0391],[35.530147,129.039197],[35.530171,129.03925],[35.530183,129.039319],[35.530168,129.039415]
+  [35.530142,129.039492],[35.530086,129.039609],[35.530065,129.039666],[35.530048,129.039743],[35.530032,129.039883],[35.530022,129.039957],[35.529985,129.040017],[35.529965,129.040102]
+  [35.529982,129.040193],[35.530056,129.040306],[35.530177,129.040518],[35.53026,129.040644],[35.53035,129.040784],[35.530397,129.041053],[35.530471,129.041509],[35.530539,129.041993]
+  [35.530618,129.042502],[35.530685,129.042931],[35.530728,129.043208],[35.530787,129.043471],[35.53086,129.043804],[35.530933,129.044114],[35.530994,129.0444],[35.531057,129.044677]
+  [35.531101,129.044888],[35.531158,129.045214],[35.531233,129.045585],[35.531293,129.045912],[35.531371,129.046316],[35.531448,129.046718],[35.531459,129.04701],[35.531474,129.047328]
+  [35.531488,129.0477],[35.531504,129.048031],[35.531638,129.048382],[35.53171,129.04856],[35.531826,129.04885],[35.53193,129.04912],[35.532047,129.049407],[35.532174,129.049735]
+  [35.532295,129.050038],[35.532407,129.050333],[35.532491,129.050534],[35.532617,129.05086],[35.532751,129.051191],[35.53291,129.051606],[35.533202,129.052327],[35.533338,129.052667]
+  [35.533468,129.053012],[35.533612,129.053365],[35.533822,129.053886],[35.533995,129.054326],[35.534133,129.054674],[35.534254,129.054975],[35.534358,129.055242],[35.534498,129.055607]
+  [35.534681,129.055705],[35.534844,129.055792],[35.534978,129.055721],[35.535115,129.055639],[35.535247,129.055562],[35.53541,129.055465],[35.535613,129.055348],[35.535911,129.055169]
+  [35.536182,129.055021],[35.536368,129.054938],[35.536592,129.054844],[35.536813,129.054745],[35.537058,129.054633],[35.537333,129.054513],[35.537528,129.054424],[35.537757,129.054328]
+  [35.537922,129.05428],[35.538162,129.054217],[35.538306,129.054262],[35.538505,129.054309],[35.538732,129.05437],[35.538899,129.054313],[35.539178,129.054202],[35.539329,129.054073]
+  [35.53938,129.054138],[35.539329,129.054073],[35.53919,129.054197],[35.538961,129.054282],[35.538738,129.054375],[35.538563,129.054332],[35.538389,129.054284],[35.53816,129.054223]
+  [35.537988,129.054265],[35.537768,129.054323],[35.537614,129.054391],[35.537419,129.054471],[35.537176,129.054584],[35.536951,129.054683],[35.536695,129.054797],[35.536486,129.054886]
+  [35.536266,129.054982],[35.536082,129.055063],[35.535954,129.055142],[35.535754,129.055253],[35.535492,129.055417],[35.535306,129.055523],[35.535017,129.055694],[35.534842,129.055797]
+  [35.534493,129.055609],[35.534403,129.055353],[35.534291,129.055086],[35.534187,129.054819],[35.534062,129.054504],[35.533887,129.054072],[35.533703,129.05361],[35.533539,129.05319]
+  [35.53337,129.052758],[35.533219,129.052377],[35.53307,129.051996],[35.532936,129.05167],[35.532785,129.051297],[35.532643,129.050924],[35.532437,129.050406],[35.532349,129.050189]
+  [35.532226,129.049871],[35.532107,129.049565],[35.531968,129.049228],[35.531874,129.048978],[35.531748,129.04866],[35.531606,129.048298],[35.5315,129.048023],[35.531489,129.047777]
+  [35.531476,129.04743],[35.531466,129.047121],[35.531452,129.046715],[35.531386,129.046408],[35.531305,129.04597],[35.531243,129.045657],[35.531177,129.045322],[35.531115,129.044993]
+  [35.531059,129.044688],[35.530967,129.044286],[35.530891,129.043942],[35.530799,129.043554],[35.53073,129.043241],[35.530665,129.042823],[35.530588,129.04232],[35.530513,129.041827]
+  [35.530444,129.041352],[35.53035,129.040784],[35.530196,129.040554],[35.530096,129.04037],[35.52998,129.04018],[35.529965,129.040097],[35.529987,129.04002],[35.530014,129.039979]
+  [35.530031,129.039914],[35.53004,129.039801],[35.53006,129.039675],[35.530084,129.039614],[35.530131,129.039511],[35.530163,129.039435],[35.530183,129.039341],[35.530169,129.039242]
+  [35.53011,129.03913],[35.530042,129.039004],[35.529959,129.038873],[35.529866,129.038746],[35.529845,129.03866],[35.529852,129.038556],[35.529802,129.038395],[35.529729,129.038211]
+  [35.529661,129.038085],[35.529594,129.03794],[35.529549,129.037779],[35.529529,129.037636],[35.52949,129.03742],[35.529463,129.037265],[35.529412,129.037109],[35.529334,129.036917]
+  [35.529264,129.036797],[35.529189,129.036693],[35.52908,129.036516],[35.528979,129.036346],[35.528938,129.03624],[35.528893,129.036084],[35.528858,129.035772],[35.528815,129.035528]
+  [35.528738,129.03524],[35.52867,129.034996],[35.528611,129.03481],[35.528535,129.034637],[35.528425,129.034474],[35.52837,129.034371],[35.528288,129.034135],[35.528254,129.03407]
+  [35.528219,129.034006],[35.528187,129.033887],[35.528153,129.033762],[35.5281,129.033683],[35.527926,129.033569],[35.527844,129.0335],[35.527758,129.033421],[35.527681,129.033394]
+  [35.527606,129.033346],[35.527546,129.033261],[35.527518,129.033189],[35.527502,129.033103],[35.527488,129.032998],[35.527496,129.032899],[35.527518,129.032646],[35.527538,129.032418]
+  [35.52756,129.032171],[35.527582,129.031929],[35.527577,129.031826],[35.527535,129.031657],[35.527499,129.03151],[35.527476,129.031389],[35.527479,129.031243],[35.52749,129.031108]
+  [35.527511,129.030948],[35.52754,129.030836],[35.527614,129.030695],[35.527698,129.030551],[35.527809,129.030386],[35.527896,129.030178],[35.527967,129.030064],[35.528084,129.029965]
+  [35.528186,129.029899],[35.528245,129.029881],[35.52844,129.029806],[35.528525,129.029753],[35.528648,129.029652],[35.528732,129.029585],[35.528758,129.02955],[35.528676,129.029341]
+  [35.528579,129.029217],[35.528451,129.029013],[35.528341,129.028856],[35.528183,129.028763],[35.528094,129.028695],[35.527988,129.028582],[35.527864,129.028455],[35.527769,129.028345]
+  [35.527734,129.028267],[35.527716,129.028156],[35.527707,129.028005],[35.527701,129.027845],[35.527699,129.027646],[35.527716,129.027569],[35.527754,129.027479],[35.527773,129.027411]
+  [35.527796,129.027285],[35.527774,129.027111],[35.527757,129.026915],[35.527742,129.026749],[35.527775,129.026474],[35.527782,129.026356],[35.527785,129.026182],[35.527686,129.026147]
+  [35.527562,129.026171],[35.52746,129.026196],[35.527306,129.026231],[35.527232,129.026218],[35.527087,129.02614],[35.526947,129.026065],[35.526876,129.025994],[35.526784,129.025826]
+  [35.526692,129.025642],[35.526646,129.025567],[35.526532,129.025385],[35.526413,129.025211],[35.526295,129.025048],[35.52616,129.024868],[35.526103,129.024759],[35.526007,129.024611]
+  [35.525957,129.024483],[35.525963,129.024381],[35.525949,129.024309],[35.525912,129.024228],[35.525841,129.024149],[35.525802,129.024074],[35.525773,129.023927],[35.525762,129.023742]
+  [35.525757,129.023629],[35.525742,129.023458],[35.5259,129.023566]
+  ]
+};
+var COURSES = [
+  {id:0,name:'제1코스',diff:'hard',dist:6.9,time:285,kcal:1050,oneWay:false,s:[35.556837,129.066758],e:[35.556844,129.066648],summit:true,eName:'신불산 정상(1,159m)',desc:'영남알프스복합웰컴센터를 출발해 공룡능선을 경유, 신불산 정상(1,159m)까지 오르는 왕복 약 6.9km의 대표 코스입니다. 초반 완만한 숲길을 지나 공룡능선 구간부터 경사가 급격히 가팔라지며 산행의 진수를 느낄 수 있습니다. 정상에서는 간월산·영축산으로 이어지는 영남알프스 전 능선이 360도 파노라마로 펼쳐지며, 가을 억새밭과 겨울 상고대는 특히 장관입니다. 울산역에서 버스로 접근 가능해 대중교통 산행에도 적합합니다. ⚠️ 왕복 코스, 공룡능선 급경사 구간 주의, 겨울철 아이젠 필수, 하산 시 무릎 보호대 권장.',tags:['영남알프스복합웰컴센터','공룡능선','정상조망','대중교통','왕복']},
+  {id:1,name:'제2코스',diff:'easy',dist:7.4,time:205,kcal:1480,oneWay:false,s:[35.52588,129.023555],e:[35.525878,129.023571],summit:true,eName:'신불산 정상(1,159m)',desc:'신불산자연휴양림을 출발해 파래소폭포·간월재(920m)를 경유, 신불산 정상(1,159m)까지 오르는 왕복 약 7.4km의 입문자 추천 코스입니다. 파래소폭포의 시원한 물소리를 벗삼아 완만한 계곡길을 따라 고도를 높이다 보면 어느새 간월재의 탁 트인 억새 평원이 펼쳐집니다. 간월재 휴게소에서 컵라면과 따뜻한 음료로 에너지를 보충한 뒤 정상까지 마무리할 수 있습니다. 신불산자연휴양림 유료 주차장 이용 가능합니다. ⚠️ 왕복 코스, 파래소폭포 후 경사 증가, 가을 성수기 이른 출발 권장, 주차 혼잡 주의.',tags:['초보추천','파래소폭포','간월재','억새','가족코스']},
+  {id:2,name:'제3코스',diff:'medium',dist:6.3,time:199,kcal:960,oneWay:false,s:[35.5258,129.0235],e:[35.5258,129.0235],summit:true,eName:'신불산 정상(1,159m)',desc:'신불산자연휴양림에서 제2코스와 반대 방향 능선길로 정상(1,159m)을 왕복하는 약 6.3km 코스입니다. 출발 직후부터 경사가 꾸준히 이어지며 능선에 올라서면 신불평원의 드넓은 억새밭이 한눈에 들어옵니다. 제2코스에 비해 등산객이 적어 한적한 산행을 즐길 수 있고, 능선 구간에서 간월산·영축산 조망이 시원하게 펼쳐집니다. 신불산자연휴양림 유료 주차장 이용 가능합니다. ⚠️ 왕복 코스, 능선 바람 강할 수 있으니 방풍 재킷 지참 권장, 겨울철 아이젠 필수.',tags:['신불산자연휴양림','능선','억새','한적','정상조망']},
+  {id:3,name:'제4코스',diff:'medium',dist:6.9,time:203,kcal:1300,oneWay:true,s:[35.52588,129.023555],e:[35.5259,129.023566],summit:true,eName:'신불산 정상(1,159m)',desc:'신불산자연휴양림에서 제2코스로 올라 정상(1,159m)을 밟은 뒤 제3코스로 하산하는 순환 약 6.9km 코스입니다. 올라갈 때와 내려올 때 서로 다른 능선길을 걸어 지루함 없이 신불산의 다양한 표정을 감상할 수 있습니다. 정상에서는 간월산·영축산으로 이어지는 영남알프스 핵심 능선이 파노라마로 펼쳐지며, 신불평원의 광활한 억새밭이 하이라이트입니다. 같은 길을 반복하지 않아 산행 완성도가 높고 코스 변화가 풍부합니다. ⚠️ 순환 코스, 겨울철 아이젠 필수, 능선 바람 대비 방풍 재킷 지참 권장.'  ,tags:['신불산자연휴양림','순환','억새','능선','정상조망']}
+]
+
+var WAYPTS = {
+  0:{wps:[{km:0,name:'영남알프스<br>복합웰컴센터'},{km:2.8,name:'공룡능선'},{km:3.45,name:'정상'},{km:6.9,name:'영남알프스<br>복합웰컴센터'}],segs:[],elevs:[300,900,1159,300]},
+  1:{wps:[{km:0,name:'신불산<br>자연휴양림'},{km:1.3,name:'파래소폭포'},{km:2.5,name:'간월재'},{km:3.7,name:'정상'},{km:7.4,name:'신불산<br>자연휴양림'}],segs:[],elevs:[350,500,920,1159,350]},
+  2:{wps:[{km:0,name:'신불산<br>자연휴양림'},{km:3.15,name:'정상'}],segs:[],elevs:[350,1159]},
+  3:{wps:[{km:0,name:'신불산<br>자연휴양림'},{km:1.3,name:'파래소폭포'},{km:2.5,name:'간월재'},{km:3.7,name:'정상'},{km:6.9,name:'신불산<br>자연휴양림'}],segs:[],elevs:[350,500,920,1159,350]}
+};
+var DC = {veryeasy:'#52b788',easy:'#2d9c5a',normal:'#4a90d9',hard:'#f5a0b5'};
+
+// 제4코스 GPS = 제2코스(올라가는 길 전반부) + 제3코스(내려오는 길 후반부 역순)
+(function(){
+  var c2 = COURSE_GPS[1]; // 제2코스 전체 (왕복)
+  var c3 = COURSE_GPS[2]; // 제3코스 전체 (왕복)
+  var half2 = Math.floor(c2.length / 2);
+  var half3 = Math.floor(c3.length / 2);
+  var up   = c2.slice(0, half2);   // 제2코스 올라가는 길 (출발→정상)
+  var down = c3.slice(half3);      // 제3코스 후반부 그대로 (정상→출발)
+  COURSE_GPS[3] = up.concat(down);
+})();
+
+function smoothRoute(pts) {
+  if (!pts||pts.length<2) return pts||[];
+  var r=[];
+  for (var i=0;i<pts.length-1;i++) {
+    var p0=pts[Math.max(i-1,0)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(i+2,pts.length-1)];
+    for (var t=0;t<10;t++) {
+      var tt=t/10,t2=tt*tt,t3=t2*tt;
+      r.push([
+        0.5*((2*p1[0])+(-p0[0]+p2[0])*tt+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3),
+        0.5*((2*p1[1])+(-p0[1]+p2[1])*tt+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3)
+      ]);
+    }
+  }
+  r.push(pts[pts.length-1]);
+  return r;
+}
+
+function makeRoute(c) {
+  var pts=COURSE_GPS[c.id];
+  return (pts&&pts.length>=2)?smoothRoute(pts):[c.s,c.e];
+}
+
+var gMap,gMarkers=[],gFull=null,gProg=null,gSM=null,gEM=null,gWayMarkers=[];
+var gCourse=null,gRoute=[],gTimer=null,gStep=0;
+var gMarker4=null; // 4번째 캐릭터(나) 전용 마커
+
+function addWayMarkers(c){
+  gWayMarkers.forEach(function(m){m.remove();});
+  gWayMarkers=[];
+  if(!gRoute.length)return;
+
+  // 코스별 정상 좌표 (GPS 실측값)
+  var SUMMIT={
+    0:{lat:35.539658,lng:129.053158},
+    1:{lat:35.539343,lng:129.054057},
+    2:{lat:35.539380,lng:129.054138},
+    3:{lat:35.539380,lng:129.054138}
+  };
+  var s=SUMMIT[c.id];
+  if(!s)return;
+
+  var summitLabel=c.eName||'신불산 정상(1,159m)';
+  var content='<div style="display:flex;flex-direction:column;align-items:center;gap:1px;position:relative;left:-10px;top:-18px;">'
+    +'<div style="background:#c00;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.5)">🏔</div>'
+    +'<div style="background:#c00;color:#fff;font-size:7px;font-weight:700;padding:1px 4px;border-radius:3px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.4)">'+summitLabel+'</div>'
+    +'</div>';
+  var overlay=new kakao.maps.CustomOverlay({
+    position:new kakao.maps.LatLng(s.lat,s.lng),
+    content:content,
+    yAnchor:0,
+    zIndex:100
+  });
+  overlay.setMap(gMap);
+  gWayMarkers.push({remove:function(){overlay.setMap(null);}});
+}
+
+
+// ===== 나의 레벨 테스트 =====
+var TEST_QUESTIONS = [
+  {q:'성별을 선택하세요', opts:['👨 남성','👩 여성'], key:'gender', cols:2},
+  {q:'나이대를 선택하세요', opts:['20대','30대','40대','50대','60대+'], key:'age', cols:3},
+  {q:'등산 빈도는?', opts:['주 2회+','월 2~3회','월 1회','거의 안함'], key:'freq', cols:2},
+  {q:'평균 등산 시간은?', opts:['3시간+','2~3시간','1~2시간','1시간 이하'], key:'time', cols:2},
+  {q:'최근 완주한 코스 난이도는?', opts:['어려움','보통','쉬움','등산 안해봄'], key:'level', cols:2},
+  {q:'평소 운동 여부는?', opts:['매일','주 3회+','가끔','안함'], key:'exercise', cols:2},
+  {q:'평지 1시간 걷기는?', opts:['거뜬함','조금 힘듦','많이 힘듦'], key:'walk', cols:3},
+  {q:'계단 5층 오르기는?', opts:['거뜬함','조금 힘듦','많이 힘듦'], key:'stair', cols:3}
+];
+var TEST_SCORES = {
+  gender:{'👨 남성':0,'👩 여성':-3},
+  age:{'20대':10,'30대':8,'40대':6,'50대':3,'60대+':-1},
+  freq:{'주 2회+':15,'월 2~3회':10,'월 1회':5,'거의 안함':0},
+  time:{'3시간+':15,'2~3시간':10,'1~2시간':5,'1시간 이하':0},
+  level:{'어려움':15,'보통':10,'쉬움':5,'등산 안해봄':0},
+  exercise:{'매일':10,'주 3회+':7,'가끔':3,'안함':0},
+  walk:{'거뜬함':8,'조금 힘듦':4,'많이 힘듦':0},
+  stair:{'거뜬함':7,'조금 힘듦':3,'많이 힘듦':0}
+};
+var EMOJIS_M=['🧗','🏃','🚵','⛷️','🏋️','🧘','🦅','🐻','🦁','🐯'];
+var EMOJIS_F=['🧗‍♀️','🏃‍♀️','🚵‍♀️','🤸‍♀️','🧘‍♀️','🦋','🌸','🌺','🦊','🐼'];
+var tStep=0,tAnswers={},myLevel=1,myEmoji='🧗',myRatio=0.82;
+
+function retakeTest(){
+  clearInterval(gTimer);gTimer=null;gStep=0;setBtn(false);
+  if(gCourse){
+    gMarkers.forEach(function(m,i){if(m)m.setPosition(applyOffset(gCourse.s,i));});
+    if(gMarker4)gMarker4.setPosition(applyOffset(gCourse.s,3));
+    if(gProg)gProg.setPath([]);
+    updateBars(0);
+  }
+  document.getElementById('myTestConfirm').style.display='flex';
+}
+
+function testPrev(){
+  if(tStep>0){tStep--;renderQuestion();}
+}
+
+function renderQuestion(){
+  var q=TEST_QUESTIONS[tStep];
+  var cols=q.cols||2;
+  var html='<div class="test-q">Q'+(tStep+1)+'/8. '+q.q+'</div>';
+  html+='<div class="test-opts" style="grid-template-columns:repeat('+cols+',1fr)">';
+  q.opts.forEach(function(o){
+    var sel=tAnswers[q.key]===o?'sel':'';
+    html+='<button class="test-opt '+sel+(q.key==="gender"?" gender-opt":"")+'" onclick="selectOpt(\''+q.key+'\',\''+o+'\',this)">'+o+'</button>';
+  });
+  html+='</div>';
+  document.getElementById('testContent').innerHTML=html;
+  document.getElementById('btnTestNext').disabled=!tAnswers[q.key];
+  document.getElementById('btnTestNext').textContent=(tStep===TEST_QUESTIONS.length-1)?'결과 보기 →':'다음 →';
+  // 이전 버튼 표시/숨김
+  var prevBtn=document.getElementById('btnTestPrev');
+  if(prevBtn) prevBtn.style.display=tStep>0?'block':'none';
+}
+
+function selectOpt(key,val,el){
+  tAnswers[key]=val;
+  document.querySelectorAll('.test-opt').forEach(function(b){b.classList.remove('sel');});
+  el.classList.add('sel');
+  document.getElementById('btnTestNext').disabled=false;
+}
+
+function testNext(){
+  if(tStep<TEST_QUESTIONS.length-1){tStep++;renderQuestion();}
+  else{showResult();}
+}
+
+function calcScore(){
+  var score=0;
+  Object.keys(tAnswers).forEach(function(k){
+    if(TEST_SCORES[k]&&TEST_SCORES[k][tAnswers[k]]!==undefined)score+=TEST_SCORES[k][tAnswers[k]];
+  });
+  return score;
+}
+
+function showResult(){
+  var score=calcScore();
+  var level,msg,ratio,color;
+  if(score>=60){level='🦅 등대장';msg='대단해요! 어떤 코스도 거뜬히 완주할 능력이에요. 도전적인 코스에 도전해보세요!';ratio=1.0;color='#e63946';}
+  else if(score>=35){level='🧗 등춘기';msg='등산을 즐기는 중급자! 꾸준히 산을 오르며 실력을 쌓아가고 있군요!';ratio=0.82;color='#f4a261';}
+  else{level='🌱 등린이';msg='등산을 시작하는 단계예요! 쉬운 코스부터 천천히 즐기다 보면 금방 실력이 늘어요!';ratio=0.55;color='#74c69d';}
+  myLevel=score>=60?2:score>=35?1:0;myRatio=ratio;
+  var isF=tAnswers['gender']==='👩 여성';
+  var emojiList=isF?EMOJIS_F:EMOJIS_M;
+  var html='<div class="result-emoji">'+level.split(' ')[0]+'</div>';
+  html+='<div class="result-level" style="color:'+color+'">'+level+'</div>';
+  html+='<div class="result-msg">'+msg+'</div>';
+  html+='<div class="test-q">나를 대표할 이모지를 선택하세요!</div>';
+  html+='<div class="emoji-grid">';
+  emojiList.forEach(function(e,i){
+    html+='<div class="emoji-opt'+(i===0?' sel':'')+'" onclick="pickEmoji(this,\''+e+'\')">'+e+'</div>';
+  });
+  html+='</div>';
+  myEmoji=emojiList[0];
+  document.getElementById('testContent').innerHTML=html;
+  var btn=document.getElementById('btnTestNext');
+  btn.textContent='시작하기! 🏔';btn.disabled=false;
+  btn.onclick=function(){finishTest();};
+}
+
+function pickEmoji(el,e){
+  document.querySelectorAll('.emoji-opt').forEach(function(b){b.classList.remove('sel');});
+  el.classList.add('sel');myEmoji=e;
+}
+
+function finishTest(){
+  document.getElementById('myTestWrap').style.display='none';
+  document.getElementById('myEmoji').textContent=myEmoji;
+  var levelNames=['등린이','등춘기','등대장'];
+  document.getElementById('myName').textContent='나 ('+levelNames[myLevel]+')';
+  document.getElementById('myRow').style.display='flex';
+  if(gMarker4){try{gMarker4.setMap(null);}catch(e){}gMarker4=null;}
+  var myContent='<div style="width:34px;height:34px;border-radius:50%;border:3px solid #2d6a4f;'
+    +'box-shadow:0 2px 8px rgba(0,0,0,.6);background:#d8f3dc;display:flex;align-items:center;'
+    +'justify-content:center;font-size:18px;line-height:1;position:relative;left:-17px;top:-17px;">'+myEmoji+'</div>';
+  var startPos=gCourse?gCourse.s:[37.66,127.0];
+  gMarker4=new kakao.maps.CustomOverlay({
+    position: applyOffset(startPos,3),
+    content: myContent,
+    yAnchor: 0,
+    zIndex: 1000
+  });
+  gMarker4.setMap(gMap);
+}
+function confirmYes(){
+  document.getElementById('myTestConfirm').style.display='none';
+  startTest();
+}
+
+function confirmNo(){
+  document.getElementById('myTestConfirm').style.display='none';
+}
+
+function skipTest(){
+  document.getElementById('myTestWrap').style.display='none';
+}
+
+function startTest(){
+  tStep=0;tAnswers={};
+  document.getElementById('btnTestNext').disabled=true;
+  document.getElementById('btnTestNext').onclick=testNext;
+  document.getElementById('btnTestNext').textContent='다음 →';
+  document.getElementById('myTestWrap').style.display='flex';
+  renderQuestion();
+}
+window.addEventListener('load',function(){
+  document.getElementById('myTestConfirm').style.display='flex';
+});
+
+function calcHikeTime(course){
+  var courseData = {
+    0: { up:[243,163,134], dn:[182,122,100] }, // 등린이/등춘기/등대장, 등춘기=285분
+    1: { up:[184,123,101], dn:[122,82,67]   }, // 등춘기=205분
+    2: { up:[178,119,98],  dn:[119,80,65]   }, // 등춘기=199분
+    3: { up:[303,203,166], dn:[0,0,0]       }  // 등춘기=203분
+  };
+  var d = courseData[course.id] || { up:[200,148,115], dn:[143,106,82] };
+  UP_MIN = d.up;
+  if(course.oneWay){
+    DN_MIN = [0,0,0];
+    HIKE_TIME = [d.up[0], d.up[1], d.up[2]];
+  } else {
+    DN_MIN = d.dn;
+    HIKE_TIME = [d.up[0]+d.dn[0], d.up[1]+d.dn[1], d.up[2]+d.dn[2]];
+  }
+  TOTAL = HIKE_TIME[0] + 0.5; // 가장 느린 등린이 기준
+}
+var gSavedCenter=null,gSavedZoom=null;
+var TOTAL=360.5;
+var HIKE_TIME=[360, 270, 210];
+var UP_MIN=[210, 155, 105];
+var DN_MIN=[150, 105, 75];
+
+// 카카오맵 전역 변수
+var gPolyline=null; // 전체 경로선
+var gProgPolyline=null; // 진행 경로선
+
+
+// 4명 마커 위치 오프셋 (겹침 방지) - 등린이, 등춘기, 등대장, 나
+var MARKER_OFFSETS = [
+  [-0.0003, -0.0003], // 등린이: 남서
+  [-0.0003,  0.0003], // 등춘기: 남동
+  [ 0.0003, -0.0003], // 등대장: 북서
+  [ 0.00040,  0.00040]  // 나: 북동
+];
+
+function applyOffset(pos, idx) {
+  var lat = pos[0]!==undefined ? pos[0] : pos.lat;
+  var lng = pos[1]!==undefined ? pos[1] : pos.lng;
+  return new kakao.maps.LatLng(lat + MARKER_OFFSETS[idx][0], lng + MARKER_OFFSETS[idx][1]);
+}
+
+// 카카오맵용 헬퍼: 마커 위치 설정
+function setMarkerPos(overlay, kakaoLatLng) {
+  overlay.setPosition(kakaoLatLng);
+}
+
+// 배열 좌표 → 카카오 LatLng
+function toKakaoLatLng(pos) {
+  if (pos instanceof kakao.maps.LatLng) return pos;
+  var lat = pos[0]!==undefined ? pos[0] : pos.lat;
+  var lng = pos[1]!==undefined ? pos[1] : pos.lng;
+  return new kakao.maps.LatLng(lat, lng);
+}
+
+// 경로 배열 → 카카오 LatLng 배열
+function routeToKakao(route) {
+  return route.map(function(p) { return toKakaoLatLng(p); });
+}
+
+function initMap() {
+  var container = document.getElementById('map');
+  var options = {
+    center: new kakao.maps.LatLng(35.600, 128.980),
+    level: 5
+  };
+  gMap = new kakao.maps.Map(container, options);
+
+  // 지도 타입 컨트롤 추가
+  var mapTypeControl = new kakao.maps.MapTypeControl();
+  gMap.addControl(mapTypeControl, kakao.maps.ControlPosition.TOPRIGHT);
+  var zoomControl = new kakao.maps.ZoomControl();
+  gMap.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
+
+  // 3명 마커 초기 생성
+  for (var i = 0; i < 3; i++) {
+    (function(idx) {
+      var imgUrl = FACES[idx];
+      var content = '<div style="width:36px;height:36px;border-radius:50%;border:3px solid '
+        + BC[idx] + ';box-shadow:0 2px 6px rgba(0,0,0,.5);background:url(\''
+        + imgUrl + '\') center/cover no-repeat;overflow:hidden;position:relative;left:-18px;top:-18px;"></div>';
+      var customOverlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(35.600, 128.980),
+        content: content,
+        yAnchor: 0
+      });
+      customOverlay.setMap(gMap);
+      gMarkers[idx] = customOverlay;
+    })(i);
+  }
+  gMarker4 = null;
+}
+
+function pick(id) {
+  clearInterval(gTimer);gTimer=null;setBtn(false);
+  gCourse=COURSES.find(function(c){return c.id===id;});
+  calcHikeTime(gCourse);
+  gRoute=makeRoute(gCourse);gStep=0;
+  document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('on-e','on-m','on-h');});
+  var cb=document.getElementById('cb'+id);
+  if(cb) cb.classList.add(gCourse.diff==='easy'?'on-e':gCourse.diff==='hard'?'on-h':'on-m');
+  document.getElementById('ciName').textContent=(gCourse.diff==='easy'?'🟢 ':gCourse.diff==='hard'?'🔴 ':'🔵 ')+gCourse.name;
+  document.getElementById('ciDesc').textContent=gCourse.desc;
+  document.getElementById('ciTags').innerHTML=gCourse.tags.map(function(t){return'<span class="tag '+(gCourse.diff==='medium'?'m':gCourse.diff==='hard'?'h':'')+'">'+t+'</span>';}).join('');
+  updateBars(0);drawElev(gCourse);
+  if(!gMap) return; // 카카오맵 미로드 시 지도 관련 코드 건너뜀
+  if(gFull) { gFull.setMap(null); gFull=null; }
+  if(gProg) { gProg.setMap(null); gProg=null; }
+  if(gProgPolyline) { gProgPolyline.setMap(null); gProgPolyline=null; }
+  if(gSM) { gSM.setMap(null); gSM=null; }
+  if(gEM) { gEM.setMap(null); gEM=null; }
+
+  // 전체 경로선 (회색 배경선)
+  var kakaoRoute = routeToKakao(gRoute);
+  gFull = new kakao.maps.Polyline({
+    path: kakaoRoute,
+    strokeWeight: 4,
+    strokeColor: '#aaa',
+    strokeOpacity: 0.5,
+    strokeStyle: 'solid'
+  });
+  gFull.setMap(gMap);
+
+  // 진행 경로선 (초록색)
+  gProg = new kakao.maps.Polyline({
+    path: [],
+    strokeWeight: 6,
+    strokeColor: '#1b7e3e',
+    strokeOpacity: 1,
+    strokeStyle: 'solid'
+  });
+  gProg.setMap(gMap);
+
+  // 출발 마커
+  var startNames = {
+    0:'영남알프스복합웰컴센터',
+    1:'신불산자연휴양림', 2:'신불산자연휴양림', 3:'신불산자연휴양림'
+  };
+  var startLabel = startNames[gCourse.id] || gCourse.name;
+  var startContent = '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;position:relative;left:-10px;top:-18px;">'
+    + '<div style="background:#2d6a4f;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.5)">🏛</div>'
+    + '<div style="background:#2d6a4f;color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.4)">'
+    + startLabel + '</div></div>';
+  gSM = new kakao.maps.CustomOverlay({
+    position: toKakaoLatLng(gCourse.s),
+    content: startContent,
+    yAnchor: 0,
+    zIndex: 100
+  });
+  gSM.setMap(gMap);
+
+  // 도착 마커는 addWayMarkers()의 정상 마커로 통일 (중복 제거)
+
+  // 마커 위치 이동
+  gMarkers.forEach(function(m,i){if(m) m.setPosition(applyOffset(gCourse.s,i));});
+  if(gMarker4) gMarker4.setPosition(applyOffset(gCourse.s,3));
+
+  // 지도 범위 맞추기
+  var bounds = new kakao.maps.LatLngBounds();
+  kakaoRoute.forEach(function(latlng){ bounds.extend(latlng); });
+  gMap.setBounds(bounds, 40, 40, 40, 40);
+  addWayMarkers(gCourse);
+}
+
+function goClick() {
+  if(!gCourse){alert('코스를 먼저 선택하세요!');return;}
+  if(!gMap){alert('카카오맵이 아직 로드되지 않았습니다.\nGitHub Pages에서 실행해 주세요!');return;}
+  if(gTimer)return;
+  if(gStep>=TOTAL){gStep=0;gMarkers.forEach(function(m,i){if(m)m.setPosition(applyOffset(gCourse.s,i));});if(gMarker4)gMarker4.setPosition(applyOffset(gCourse.s,3));if(gProg)gProg.setPath([]);updateBars(0);}
+  setBtn(true);
+  // 나의 완주시간 포함해서 TOTAL 동적 계산
+  // 석남사코스(원점회귀)는 course.time 전체를 기준으로 함
+  var myTotalForTimer = gMarker4 ? (gCourse.id===1 ? gCourse.time : gCourse.oneWay ? HIKE_TIME[myLevel] : UP_MIN[myLevel]+DN_MIN[myLevel]) : 0;
+  var dynamicTotal = Math.max(TOTAL, myTotalForTimer);
+  gTimer=setInterval(function(){
+    var spd=parseInt(document.getElementById('spd').value);
+    //
+    //
+    gStep = Math.min(gStep + spd*0.06, dynamicTotal);
+    var N=gRoute.length;
+    var allDone=true;
+    var isOneWay = gCourse.oneWay === true || gCourse.id === 1;
+
+    // ── 3명 각자 독립적으로 이동 ──
+    for(var i=0;i<3;i++){
+      var elapsed = gStep;
+      var upMin   = UP_MIN[i];
+      var dnMin   = DN_MIN[i];
+      var totalMin= HIKE_TIME[i];
+      var pos;
+
+      if(isOneWay){
+        if(elapsed < totalMin){
+          var hp = elapsed / totalMin;
+          pos = Math.min(Math.floor(hp*(N-1)), N-1);
+          allDone = false;
+        } else {
+          pos = N-1;
+        }
+      } else {
+        var half = Math.floor((N-1)/2);
+        if(elapsed < upMin){
+          var hp = elapsed / upMin;
+          pos = Math.min(Math.floor(hp*half), half);
+          allDone = false;
+        } else if(elapsed < totalMin){
+          var dp = (elapsed - upMin) / dnMin;
+          pos = half + Math.min(Math.floor(dp*(N-1-half)), N-1-half);
+          allDone = false;
+        } else {
+          pos = N-1; // 출발점 복귀 완료
+        }
+      }
+      gMarkers[i].setPosition(applyOffset(gRoute[Math.max(0, Math.min(pos, N-1))], i));
+    }
+
+    // ── 4번째 캐릭터(나) 이동 ──
+    if(gMarker4){
+      var myUpMin = UP_MIN[myLevel];
+      var myDnMin = DN_MIN[myLevel];
+      var myTotalMin = isOneWay ? HIKE_TIME[myLevel] : myUpMin+myDnMin;
+      var myPos;
+      if(isOneWay){
+        if(gStep < myTotalMin){
+          var hp=gStep/myTotalMin;
+          myPos=Math.min(Math.floor(hp*(N-1)),N-1);
+          allDone=false;
+        } else { myPos=N-1; }
+      } else {
+        var half=Math.floor((N-1)/2);
+        if(gStep < myUpMin){
+          var hp=gStep/myUpMin;
+          myPos=Math.min(Math.floor(hp*half),half);
+          allDone=false;
+        } else if(gStep < myTotalMin){
+          var dp=(gStep-myUpMin)/myDnMin;
+          myPos=half+Math.min(Math.floor(dp*(N-1-half)),N-1-half);
+          allDone=false;
+        } else { myPos=N-1; }
+      }
+      var rawPos=gRoute[Math.max(0,Math.min(myPos,N-1))];
+      gMarker4.setPosition(applyOffset(rawPos, 3));
+    }
+
+    // 등대장 기준 녹색 등산로
+    var elapsed2 = gStep;
+    if(isOneWay){
+      var hp2 = Math.min(elapsed2 / HIKE_TIME[2], 1);
+      var pi2 = Math.min(Math.floor(hp2*(N-1)), N-1);
+      gProg.setPath(routeToKakao(gRoute.slice(0, pi2+1)));
+    } else {
+      var half2 = Math.floor((N-1)/2);
+      if(elapsed2 < UP_MIN[2]){
+        // 상행: 0 → half2
+        var hp2 = elapsed2 / UP_MIN[2];
+        var pi2 = Math.min(Math.floor(hp2*half2), half2);
+        gProg.setPath(routeToKakao(gRoute.slice(0, pi2+1)));
+      } else {
+        // 하행: half2 → N-1 (현재 위치까지 계속 연장)
+        var dp2 = Math.min((elapsed2 - UP_MIN[2]) / DN_MIN[2], 1);
+        var pi2 = half2 + Math.min(Math.floor(dp2*(N-1-half2)), N-1-half2);
+        gProg.setPath(routeToKakao(gRoute.slice(0, pi2+1)));
+      }
+    }
+
+    updateBars(gStep);
+    if(gStep >= dynamicTotal){ clearInterval(gTimer); gTimer=null; setBtn(false); }
+  },50);
+}
+
+function resetClick(){
+  clearInterval(gTimer);gTimer=null;gStep=0;setBtn(false);
+  if(gCourse){
+    gMarkers.forEach(function(m,i){if(m)m.setPosition(applyOffset(gCourse.s,i));});
+    if(gMarker4)gMarker4.setPosition(applyOffset(gCourse.s,3));
+    if(gProg)gProg.setPath([]);
+    updateBars(0);
+  }
+}
+
+function setBtn(b){
+  var btn=document.getElementById('btnGo');
+  btn.textContent=b?'⏸ 진행 중...':'▶ 출발';
+  b?btn.classList.add('busy'):btn.classList.remove('busy');
+  btn.onclick=b?null:goClick;
+}
+
+function toHMS(mins){
+  var h=Math.floor(mins/60),m=Math.round(mins%60);
+  if(h>0) return h+'시간 '+(m<10?'0'+m:m)+'분';
+  return m+'분';
+}
+
+function updateBars(step){
+  if(!gCourse)return;
+  var elapsed = step;
+  var isOneWay = gCourse.oneWay === true || gCourse.id === 1;
+  for(var i=0;i<3;i++){
+    var upMin    = UP_MIN[i];
+    var dnMin    = DN_MIN[i];
+    var totalMin = HIKE_TIME[i];
+    var label, barPct;
+
+    if(elapsed >= totalMin){
+      barPct = 100;
+      label = '✅ 완주 예상 ' + toHMS(totalMin) + '!';
+    } else if(isOneWay){
+      // 종주코스: 편도 누적 거리만 표시
+      var hp = Math.max(0, Math.min(1, elapsed / totalMin));
+      barPct = hp * 100;
+      var distKm = hp * gCourse.dist;
+      label = '⬆ ' + distKm.toFixed(1) + 'km · ' + toHMS(elapsed);
+    } else if(elapsed < upMin){
+      var hp = Math.max(0, Math.min(1, elapsed / upMin));
+      barPct = hp * 50;
+      var distKm = hp * gCourse.dist;
+      label = '⬆ ' + distKm.toFixed(1) + 'km · ' + toHMS(elapsed);
+    } else {
+      var dp = Math.max(0, Math.min(1, (elapsed - upMin) / dnMin));
+      barPct = 50 + dp * 50;
+      var distLeft = Math.max(0, (1-dp) * gCourse.dist);
+      label = '⬇ ' + distLeft.toFixed(1) + 'km · ' + toHMS(elapsed);
+    }
+    document.getElementById('b'+i).style.width = Math.max(0, Math.min(100, barPct)) + '%';
+    document.getElementById('s'+i).textContent = label;
+  }
+  // 4번째 캐릭터(나) 진행률
+  if(document.getElementById('myRow').style.display!=='none'){
+    var myTotalMin=isOneWay?HIKE_TIME[myLevel]:UP_MIN[myLevel]+DN_MIN[myLevel];
+    var myUpMinV=UP_MIN[myLevel];
+    var myDnMinV=DN_MIN[myLevel];
+    var myLabel,myBar;
+    if(elapsed>=myTotalMin){myBar=100;myLabel='✅ 완주 예상 '+toHMS(myTotalMin)+'!';}
+    else if(isOneWay){var hp=Math.min(1,elapsed/myTotalMin);myBar=hp*100;myLabel='⬆ '+(hp*gCourse.dist).toFixed(1)+'km · '+toHMS(elapsed);}
+    else if(elapsed<myUpMinV){var hp=Math.min(1,elapsed/myUpMinV);myBar=hp*50;myLabel='⬆ '+(hp*gCourse.dist).toFixed(1)+'km · '+toHMS(elapsed);}
+    else{var dp=Math.min(1,(elapsed-myUpMinV)/myDnMinV);myBar=50+dp*50;myLabel='⬇ '+Math.max(0,(1-dp)*gCourse.dist).toFixed(1)+'km · '+toHMS(elapsed);}
+    document.getElementById('b3').style.width=Math.max(0,Math.min(100,myBar))+'%';
+    document.getElementById('s3').textContent=myLabel;
+  }
+}
+
+
+
+
+function renderBtns(){
+  function toHour(m){var h=Math.floor(m/60),r=m%60;return h>0?h+'시간 '+(r<10?'0'+r:r)+'분':r+'분';}
+  function mk(c){
+    return '<button class="cbtn" id="cb'+c.id+'" onclick="pick('+c.id+')">'
+      + '<div class="cn">'+c.name+'</div>'
+      + '<div class="cd">'+(c.oneWay?'순환 ':'왕복 ')+'약 '+c.dist+'km·'+toHour(c.time)+'</div></button>';
+  }
+  document.getElementById('gEasy').innerHTML=COURSES.filter(function(c){return c.diff==='easy';}).map(mk).join('');
+  document.getElementById('gMed').innerHTML=COURSES.filter(function(c){return c.diff==='medium';}).map(mk).join('');
+  document.getElementById('gHard').innerHTML=COURSES.filter(function(c){return c.diff==='hard';}).map(mk).join('');
+}
+
+function drawElev(c){
+  var data=WAYPTS[c.id];
+  var h2=Math.floor(c.time/60),m2=c.time%60;
+  document.getElementById('elevSum').textContent=(c.oneWay?'순환 ':'왕복 ')+'약 '+c.dist+'km ('+h2+'시간 '+(m2<10?'0'+m2:m2)+'분)';
+  document.getElementById('elevSummitLabel').textContent=c.eName||'신불산 정상(1,159m)';
+
+  if(!data){
+    document.getElementById('elevWaypts').innerHTML='';
+    return;
+  }
+  var wps=data.wps, elevs=data.elevs;
+
+  // 경유지 표시 (이름만)
+  var wpHtml=wps.map(function(wp){
+    return '<div style="text-align:center;font-size:11px;font-weight:700;color:#333;flex:1;">'
+      +wp.name+'</div>';
+  }).join('');
+  document.getElementById('elevWaypts').innerHTML=wpHtml;
+
+  // 부드러운 고도 포인트 생성
+  var pts=[];
+  for(var i=0;i<wps.length-1;i++){
+    var steps=12;
+    for(var s=0;s<steps;s++){
+      var t=s/steps;
+      pts.push(elevs[i]+(elevs[i+1]-elevs[i])*t);
+    }
+  }
+  pts.push(elevs[elevs.length-1]);
+
+  var minE=Math.min.apply(null,elevs)-100;
+  var maxE=Math.max.apply(null,elevs)+80;
+
+  if(window._elevChart) window._elevChart.destroy();
+  var cv=document.getElementById('eCanvas');
+  window._elevChart=new Chart(cv,{
+    type:'line',
+    data:{
+      labels:pts.map(function(_,i){return i;}),
+      datasets:[{
+        data:pts,
+        borderColor:'#2d6a4f',
+        borderWidth:2.5,
+        fill:true,
+        backgroundColor:'rgba(45,106,79,0.15)',
+        tension:0.4,
+        pointRadius:0,
+        pointHoverRadius:3
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return Math.round(ctx.raw).toLocaleString()+'m';}}}},
+      scales:{
+        x:{display:false},
+        y:{
+          min:minE,max:maxE,
+          grid:{color:'rgba(128,128,128,0.1)'},
+          ticks:{font:{size:10},color:'#888',callback:function(v){return v.toLocaleString()+'m';},maxTicksLimit:4},
+          border:{display:false}
+        }
+      }
+    }
+  });
+}
+
+window.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('img0').src=FACES[0];
+  document.getElementById('img1').src=FACES[1];
+  document.getElementById('img2').src=FACES[2];
+  renderBtns();
+  // 북한산 툴팁
+  var tip=document.getElementById('bukhanTip');
+  var box=document.getElementById('bukhanTipBox');
+  tip.addEventListener('mouseenter',function(){box.style.display='block';});
+  tip.addEventListener('mouseleave',function(){box.style.display='none';});
+  tip.addEventListener('touchstart',function(e){
+    e.preventDefault();
+    box.style.display=box.style.display==='block'?'none':'block';
+  });
+  document.addEventListener('touchstart',function(e){
+    if(!tip.contains(e.target))box.style.display='none';
+  });
+  // 카카오맵 SDK 동적 로드 후 지도 초기화
+  loadKakaoSDK(function(){
+    initMap();
+    setTimeout(function(){pick(0);},800);
+  });
+});
+var resizeTimer=null;
+function onDisplayChange(){
+  if(resizeTimer)clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(function(){
+    if(gCourse)drawElev(gCourse);
+    // 카카오맵 relayout
+    if(gMap){
+      gMap.relayout();
+      if(gCourse && gRoute && gRoute.length>1){
+        var bounds = new kakao.maps.LatLngBounds();
+        routeToKakao(gRoute).forEach(function(latlng){ bounds.extend(latlng); });
+        gMap.setBounds(bounds, 40, 40, 40, 40);
+      }
+    }
+  },400);
+}
+window.addEventListener('resize',onDisplayChange);
+document.addEventListener('fullscreenchange',onDisplayChange);
+document.addEventListener('webkitfullscreenchange',onDisplayChange);
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+</body>
+</html>
