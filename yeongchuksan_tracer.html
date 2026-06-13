@@ -99,11 +99,10 @@ textarea {
     </a>
   </div>
   <select id="courseSelect" onchange="onCourseChange()">
-    <option value="0">0. 홍룡폭포코스 (통도사주차장 → 홍룡폭포 → 통도사주차장)</option>
-    <option value="1">1. 통도사코스 (통도사주차장 → 영축산 정상 → 통도사주차장)</option>
-    <option value="2">2. 서운암코스 (서운암주차장 → 영축산 정상 → 서운암주차장)</option>
-    <option value="3">3. 순환코스 (통도사주차장 → 영축산 정상 → 서운암주차장)</option>
-    <option value="4">4. 종주코스 (통도사주차장 → 영축산 정상 → 신불산 → 간월재)</option>
+    <option value="0">0. 통도사코스 (통도사주차장 → 영축산 정상 → 통도사주차장)</option>
+    <option value="1">1. 서운암코스 (서운암주차장 → 영축산 정상 → 서운암주차장)</option>
+    <option value="2">2. 순환코스 (통도사주차장 → 영축산 정상 → 서운암주차장)</option>
+    <option value="3">3. 종주코스 (통도사주차장 → 영축산 정상 → 신불산 → 간월재)</option>
   </select>
   <div class="info">
     <div>포인트: <span id="pointCount">0</span>개</div>
@@ -126,11 +125,10 @@ textarea {
 
 <script>
 var COURSE_CENTERS = {
-  0:[35.490, 129.066],  // 홍룡폭포코스 - 통도사 방향
-  1:[35.490, 129.066],  // 통도사코스 - 통도사 방향
-  2:[35.476, 129.055],  // 서운암코스 - 서운암 방향
-  3:[35.483, 129.061],  // 순환코스 - 중간
-  4:[35.490, 129.066]   // 종주코스 - 통도사 방향
+  0:[35.490, 129.066],  // 통도사코스
+  1:[35.476, 129.055],  // 서운암코스
+  2:[35.483, 129.061],  // 순환코스
+  3:[35.490, 129.066]   // 종주코스
 };
 
 var map=null, polyline=null, path=[], markers=[], startImg=null, endImg=null;
