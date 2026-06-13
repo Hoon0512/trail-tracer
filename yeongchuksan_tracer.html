@@ -79,7 +79,7 @@ textarea {
     1. <b style="color:#c0392b">카카오 개발자콘솔</b> → 내 앱 → 플랫폼 → Web<br>
     &nbsp;&nbsp;&nbsp;→ 사이트 도메인에 <b>http://localhost:8080</b> 추가<br>
     2. 터미널에서 <b>python -m http.server 8080</b> 실행<br>
-    3. 브라우저에서 <b>http://localhost:8080/ganwolsan_tracer.html</b><br>
+    3. 브라우저에서 <b>http://localhost:8080/yeongchuksan_tracer.html</b><br>
     4. 앱키 입력 → 지도 로드 → 등산로 클릭클릭<br>
     5. Export → 복사 → 클로드에게 붙여넣기!
   </div>
@@ -267,7 +267,7 @@ function exportPath(){
   document.getElementById('output').value=
     '// 영축산 코스: '+name+'\n'+
     '// 포인트: '+path.length+'개 / 거리: '+km+'km\n'+
-    '// ganwolsan.html COURSE_GPS에 적용하세요\n'+
+    '// yeongchuksan.html COURSE_GPS에 적용하세요\n'+
     JSON.stringify(path);
   showWarn('✅ Export 완료!',2000);
 }
@@ -297,6 +297,12 @@ function onCourseChange(){
 }
 
 window.addEventListener('DOMContentLoaded',function(){
+  // 이전 신불산/간월산 데이터 자동 삭제
+  ['sinbul_','ganwol_'].forEach(function(prefix){
+    [0,1,2,3,4].forEach(function(i){
+      localStorage.removeItem(prefix+i);
+    });
+  });
   var k=localStorage.getItem('kakao_appkey');
   if(k)document.getElementById('appkeyInput').value=k;
 });
